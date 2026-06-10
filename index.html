@@ -3,93 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferricar | Control Operativo Real</title>
-    
-    <!-- Librerías Externas -->
+    <title>Ferricar | Dashboard Operativo Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f1f5f9; }
         .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .tab-active { background: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
-        
-        /* Ocultar scrollbar pero mantener funcionalidad */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #020617; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-
         .loading-overlay { background: #020617; position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        select option { background-color: #0f172a; color: white; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- Cargador de Sistema -->
     <div id="loader" class="loading-overlay">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse">CONECTANDO CON ORIGEN DE DATOS...</h2>
+        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse">LEYENDO GOOGLE SHEETS...</h2>
     </div>
 
-    <!-- Navegación Superior -->
     <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-6 py-4">
         <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-3">
                 <div class="p-2 bg-blue-600 rounded-lg"><i data-lucide="database" class="text-white w-6 h-6"></i></div>
-                <h1 class="text-xl font-bold">FERRICAR <span class="text-blue-400 font-light text-sm ml-2 tracking-widest">CONTROL OPERATIVO</span></h1>
+                <h1 class="text-xl font-bold uppercase tracking-tighter">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">CONTROL OPERATIVO</span></h1>
             </div>
-
             <nav class="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
-                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold transition-all uppercase">Operativo</button>
-                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all uppercase">Activos</button>
-                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all uppercase">Auxiliares</button>
+                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold uppercase">Operativo</button>
+                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase">Activos</button>
+                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase">Auxiliares</button>
             </nav>
-
-            <div id="connection-status" class="flex items-center gap-2 text-xs font-bold uppercase py-2 px-4 rounded-full bg-slate-800 border border-slate-700">
+            <div id="conn-status" class="flex items-center gap-2 text-[10px] font-black uppercase py-2 px-4 rounded-full bg-slate-800 border border-slate-700">
                 <span id="status-dot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
-                <span id="status-text">Sin conexión</span>
+                <span id="status-text">Buscando Datos</span>
             </div>
         </div>
     </header>
 
     <main class="max-w-[1600px] mx-auto p-6">
-
-        <!-- FILTRO DE MES ÚNICO -->
+        <!-- SELECTOR DE MES -->
         <div class="glass-card rounded-2xl p-8 mb-8 border-l-4 border-blue-500">
             <div class="flex flex-col md:flex-row md:items-center gap-6">
-                <div class="bg-blue-500/10 p-4 rounded-full">
-                    <i data-lucide="calendar" class="text-blue-500 w-8 h-8"></i>
-                </div>
+                <div class="bg-blue-500/10 p-4 rounded-full"><i data-lucide="calendar" class="text-blue-500 w-8 h-8"></i></div>
                 <div class="flex-1">
-                    <p class="text-xs text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Seleccionar Periodo (Mes)</p>
-                    <select id="month-filter" onchange="applyFilters()" class="w-full md:w-64 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                        <option value="">Esperando datos...</option>
+                    <p class="text-xs text-slate-500 font-black uppercase mb-2">Seleccionar Periodo (Mes)</p>
+                    <select id="month-filter" onchange="applyFilters()" class="w-full md:w-64 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Cargando meses...</option>
                     </select>
-                </div>
-                <div id="error-alert" class="hidden bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl flex items-center gap-3">
-                    <i data-lucide="alert-triangle" class="text-rose-500"></i>
-                    <p class="text-xs text-rose-200">Error: No se pueden cargar datos desde <code class="bg-rose-900/50 px-1">file://</code>. Debes desplegar en Vercel o GitHub.</p>
                 </div>
             </div>
         </div>
 
-        <!-- DASHBOARD VACÍO POR DEFECTO -->
-        <div id="main-content" class="opacity-40 pointer-events-none transition-opacity duration-500">
-            
-            <!-- PANEL OPERATIVO -->
+        <div id="main-content" class="space-y-8">
+            <!-- KPIs -->
             <div id="tab-operativo" class="tab-content">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Total Planillas</p>
+                        <p class="text-xs font-black text-slate-500 uppercase mb-4">Total Planillas</p>
                         <div id="kpi-planillas" class="text-5xl font-bold text-white">0</div>
                     </div>
                     <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">% Retorno Cubetas</p>
+                        <p class="text-xs font-black text-slate-500 uppercase mb-4">% Retorno Cubetas</p>
                         <div id="kpi-perc-retorno-cubetas" class="text-5xl font-bold text-blue-400">0%</div>
                     </div>
                     <div id="card-neveras" class="glass-card p-8 rounded-3xl border-b-4">
-                        <p id="label-neveras" class="text-xs font-black uppercase tracking-widest mb-4">Balance Neveras</p>
+                        <p id="label-neveras" class="text-xs font-black uppercase mb-4">Balance Neveras</p>
                         <div id="kpi-neveras-diff" class="text-5xl font-bold">0</div>
                     </div>
                 </div>
@@ -110,19 +89,15 @@
                 </div>
 
                 <div class="glass-card p-8 rounded-3xl h-[450px]">
-                    <h3 class="font-bold flex items-center gap-2 mb-8 text-slate-400">
-                        <i data-lucide="line-chart"></i> Trading Diario de Cubetas
+                    <h3 class="font-bold mb-8 text-slate-400 uppercase text-xs tracking-widest flex items-center gap-2">
+                        <i data-lucide="line-chart" class="w-4 h-4"></i> Trading Diario de Cubetas
                     </h3>
-                    <div class="h-full"><canvas id="tradingChart"></canvas></div>
+                    <div class="h-full relative"><canvas id="tradingChart"></canvas></div>
                 </div>
             </div>
 
-            <!-- PANEL ACTIVOS -->
+            <!-- TABLAS -->
             <div id="tab-plasticas" class="tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    <div class="glass-card p-8 rounded-3xl h-[350px]"><canvas id="barCubetas"></canvas></div>
-                    <div class="glass-card p-8 rounded-3xl h-[350px]"><canvas id="barNeveras"></canvas></div>
-                </div>
                 <div class="glass-card rounded-3xl overflow-hidden">
                     <table class="w-full text-left">
                         <thead class="bg-slate-900/50 text-slate-500 uppercase text-[10px] font-black">
@@ -138,19 +113,14 @@
                 </div>
             </div>
 
-            <!-- PANEL AUXILIARES -->
             <div id="tab-auxiliares" class="tab-content hidden">
                 <div class="glass-card rounded-3xl overflow-hidden">
-                    <div class="p-8 border-b border-slate-800">
-                        <input type="text" id="searchAux" onkeyup="filterAuxTable()" placeholder="Buscar auxiliar..." class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
                     <table class="w-full text-left">
                         <thead class="bg-slate-900/50 text-slate-500 uppercase text-[10px] font-black">
                             <tr>
                                 <th class="px-8 py-5">Auxiliar</th>
                                 <th class="px-8 py-5 text-center">Viajes</th>
                                 <th class="px-8 py-5 text-center">Novedades</th>
-                                <th class="px-8 py-5 text-center">Indice/Viaje</th>
                             </tr>
                         </thead>
                         <tbody id="auxTableBody" class="divide-y divide-slate-800"></tbody>
@@ -158,15 +128,35 @@
                 </div>
             </div>
         </div>
-
     </main>
 
     <script>
-        // URL DE ORIGEN REAL (CSV)
         const GOOGLE_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQEKeP2MiCBr44H8Ib1DebEqAz77tFEzKfgLxX6ygxixdQRyMNyhqQU63yNl-SBj3W1MjOYlMPhLkK/pub?output=csv';
         
-        let rawData = []; // No hay datos de simulación
-        let charts = {};
+        let rawData = [];
+        let chartInstance = null;
+
+        // Mapeo inteligente de columnas
+        const colMap = {
+            mes: ['MES', 'mes', 'Mes'],
+            fecha: ['FECHA', 'fecha', 'Fecha'],
+            cubetas: ['CUBETAS', 'cubetas', 'Cubetas'],
+            neveras: ['NEVERAS', 'neveras', 'Neveras'],
+            ret_cub: ['retorno cubetas', 'RETORNO CUBETAS', 'Retorno cubetas', 'retorno_cubetas'],
+            ret_nev: ['Retorno neveras', 'RETORNO NEVERAS', 'retorno neveras', 'Retorno_neveras'],
+            perc_ret: ['%retorno', '% RETORNO', '% Retorno', 'porcentaje retorno'],
+            ruta: ['RUTA', 'ruta', 'Ruta'],
+            aux: ['AUXILIAR', 'auxiliar', 'Auxiliar'],
+            nov: ['TOTAL NOVEDADES', 'total novedades', 'Total Novedades', 'TOTAL_NOVEDADES']
+        };
+
+        function getVal(row, key) {
+            const possibleNames = colMap[key];
+            for (let name of possibleNames) {
+                if (row[name] !== undefined) return row[name];
+            }
+            return 0;
+        }
 
         window.onload = () => {
             lucide.createIcons();
@@ -174,50 +164,38 @@
         };
 
         async function fetchData() {
-            const statusDot = document.getElementById('status-dot');
-            const statusText = document.getElementById('status-text');
-
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV);
-                if (!response.ok) throw new Error("Error en red");
-                
                 const csvText = await response.text();
                 rawData = parseCSV(csvText);
 
                 if (rawData.length > 0) {
-                    // Éxito: Activar Dashboard
-                    document.getElementById('main-content').classList.remove('opacity-40', 'pointer-events-none');
-                    document.getElementById('error-alert').classList.add('hidden');
-                    statusDot.classList.replace('bg-slate-500', 'bg-emerald-500');
-                    statusText.innerText = "Sincronizado";
-                    
+                    document.getElementById('status-dot').className = "w-2 h-2 bg-emerald-500 rounded-full";
+                    document.getElementById('status-text').innerText = "Sincronizado";
                     populateMonthFilter();
                     applyFilters();
+                } else {
+                    throw new Error("CSV vacío");
                 }
             } catch (error) {
-                console.error("Fallo de conexión:", error);
-                document.getElementById('error-alert').classList.remove('hidden');
-                statusDot.classList.replace('bg-slate-500', 'bg-rose-500');
-                statusText.innerText = "Error de origen";
+                console.error(error);
+                document.getElementById('status-dot').className = "w-2 h-2 bg-rose-500 rounded-full";
+                document.getElementById('status-text').innerText = "Error de Datos";
+                alert("No se pudieron leer los datos. Revisa que el enlace de Google Sheets sea correcto.");
             }
-            
-            setTimeout(() => {
-                document.getElementById('loader').style.display = 'none';
-            }, 1000);
+            document.getElementById('loader').style.display = 'none';
         }
 
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             if (lines.length < 2) return [];
-            
-            const headers = lines[0].split(',').map(h => h.trim());
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
             return lines.slice(1).filter(l => l.trim() !== '').map(line => {
-                const values = line.split(',');
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Soporta comas dentro de comillas
                 let obj = {};
                 headers.forEach((h, i) => {
-                    let val = values[i] ? values[i].trim() : "";
-                    // Conversión numérica automática
-                    obj[h] = (isNaN(val) || val === "") ? val : parseFloat(val);
+                    let val = values[i] ? values[i].trim().replace(/"/g, '') : "";
+                    obj[h] = isNaN(val) || val === "" ? val : parseFloat(val);
                 });
                 return obj;
             });
@@ -225,119 +203,85 @@
 
         function populateMonthFilter() {
             const select = document.getElementById('month-filter');
-            const months = [...new Set(rawData.map(item => item.MES))].filter(m => m);
+            // Buscamos la columna MES con el mapeo inteligente
+            const months = [...new Set(rawData.map(r => getVal(r, 'mes')))].filter(m => m && m !== 0);
             
             if (months.length === 0) {
-                select.innerHTML = '<option>Sin meses en DB</option>';
+                select.innerHTML = '<option value="">No se halló col. MES</option>';
                 return;
             }
-
             select.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-            select.value = months[months.length - 1]; // Último mes disponible
+            select.value = months[months.length - 1];
         }
 
         function applyFilters() {
             const month = document.getElementById('month-filter').value;
-            const filtered = rawData.filter(r => r.MES === month);
-            renderDashboard(filtered);
+            const filtered = rawData.filter(r => getVal(r, 'mes') === month);
+            updateDashboard(filtered);
         }
 
-        function renderDashboard(data) {
-            if (data.length === 0) return;
-
-            // Cálculos
+        function updateDashboard(data) {
             const total = data.length;
-            const cubS = data.reduce((acc, r) => acc + (r.CUBETAS || 0), 0);
-            const cubR = data.reduce((acc, r) => acc + (r['retorno cubetas'] || 0), 0);
-            const nevS = data.reduce((acc, r) => acc + (r.NEVERAS || 0), 0);
-            const nevR = data.reduce((acc, r) => acc + (r['Retorno neveras'] || 0), 0);
-            const percSum = data.reduce((acc, r) => acc + (r['%retorno'] || 0), 0);
+            const cS = data.reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0);
+            const cR = data.reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0);
+            const nS = data.reduce((a, b) => a + (getVal(b, 'neveras') || 0), 0);
+            const nR = data.reduce((a, b) => a + (getVal(b, 'ret_nev') || 0), 0);
+            const pSum = data.reduce((a, b) => a + (getVal(b, 'perc_ret') || 0), 0);
 
             document.getElementById('kpi-planillas').innerText = total;
-            document.getElementById('kpi-perc-retorno-cubetas').innerText = (percSum/total).toFixed(1) + "%";
+            document.getElementById('kpi-perc-retorno-cubetas').innerText = (pSum/total || 0).toFixed(1) + "%";
             
-            const nevDiff = nevR - nevS;
-            const nevCard = document.getElementById('card-neveras');
-            document.getElementById('kpi-neveras-diff').innerText = Math.abs(nevDiff);
-            document.getElementById('label-neveras').innerText = nevDiff < 0 ? "Neveras Faltantes" : "Neveras de Más";
-            nevCard.className = `glass-card p-8 rounded-3xl border-b-4 ${nevDiff < 0 ? 'border-rose-500 text-rose-400' : 'border-emerald-500 text-emerald-400'}`;
+            const nDiff = nR - nS;
+            document.getElementById('kpi-neveras-diff').innerText = Math.abs(nDiff);
+            document.getElementById('label-neveras').innerText = nDiff < 0 ? "Neveras Faltantes" : "Neveras de Más";
+            document.getElementById('card-neveras').style.borderColor = nDiff < 0 ? '#f43f5e' : '#10b981';
+            document.getElementById('card-neveras').style.color = nDiff < 0 ? '#fb7185' : '#34d399';
 
-            document.getElementById('kpi-cub-salieron').innerText = cubS;
-            document.getElementById('kpi-cub-ingresaron').innerText = cubR;
-            document.getElementById('kpi-perc-global').innerText = ((cubR/cubS)*100).toFixed(1) + "%";
+            document.getElementById('kpi-cub-salieron').innerText = cS;
+            document.getElementById('kpi-cub-ingresaron').innerText = cR;
+            document.getElementById('kpi-perc-global').innerText = ((cR/cS)*100 || 0).toFixed(1) + "%";
 
-            updateCharts(data);
-            updateTables(data);
+            renderChart(data);
+            renderTables(data);
         }
 
-        function updateCharts(data) {
-            // Lógica de Gráfico de Líneas
-            const days = [...new Set(data.map(r => r.FECHA))].sort();
-            const s = days.map(d => data.filter(r => r.FECHA === d).reduce((acc, r) => acc + (r.CUBETAS || 0), 0));
-            const r = days.map(d => data.filter(r => r.FECHA === d).reduce((acc, r) => acc + (r['retorno cubetas'] || 0), 0));
+        function renderChart(data) {
+            const days = [...new Set(data.map(r => getVal(r, 'fecha')))].sort();
+            const s = days.map(d => data.filter(r => getVal(r, 'fecha') === d).reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0));
+            const r = days.map(d => data.filter(r => getVal(r, 'fecha') === d).reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0));
 
             const ctx = document.getElementById('tradingChart').getContext('2d');
-            if(charts.line) charts.line.destroy();
-            charts.line = new Chart(ctx, {
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
                 type: 'line',
-                data: { labels: days, datasets: [
-                    { label: 'Salida', data: s, borderColor: '#3b82f6', tension: 0.4, fill: false, borderWidth: 3 },
-                    { label: 'Retorno', data: r, borderColor: '#fbbf24', tension: 0.4, fill: false, borderWidth: 3 }
-                ]},
+                data: {
+                    labels: days.map(d => d.toString().split('-').pop()),
+                    datasets: [
+                        { label: 'Salida', data: s, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
+                        { label: 'Retorno', data: r, borderColor: '#fbbf24', tension: 0.4 }
+                    ]
+                },
                 options: { 
                     responsive: true, 
-                    maintainAspectRatio: false, 
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
-                    }
-                }
-            });
-            
-            // Gráficos de barras (Cubetas y Neveras por Ruta)
-            const routes = [...new Set(data.map(r => r.RUTA))].slice(0, 10);
-            renderBarChart('barCubetas', routes, 
-                routes.map(rt => data.filter(r => r.RUTA === rt).reduce((acc, r) => acc + (r.CUBETAS || 0), 0)),
-                routes.map(rt => data.filter(r => r.RUTA === rt).reduce((acc, r) => acc + (r['retorno cubetas'] || 0), 0)),
-                'Balance Cubetas / Ruta', '#3b82f6');
-            
-            renderBarChart('barNeveras', routes, 
-                routes.map(rt => data.filter(r => r.RUTA === rt).reduce((acc, r) => acc + (r.NEVERAS || 0), 0)),
-                routes.map(rt => data.filter(r => r.RUTA === rt).reduce((acc, r) => acc + (r['Retorno neveras'] || 0), 0)),
-                'Balance Neveras / Ruta', '#f43f5e');
-        }
-
-        function renderBarChart(id, labels, s, r, title, color) {
-            const ctx = document.getElementById(id).getContext('2d');
-            if(charts[id]) charts[id].destroy();
-            charts[id] = new Chart(ctx, {
-                type: 'bar',
-                data: { labels, datasets: [
-                    { label: 'Salida', data: s, backgroundColor: color },
-                    { label: 'Retorno', data: '#1e293b' }
-                ]},
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { title: { display: true, text: title, color: '#94a3b8' }, legend: { display: false } },
-                    scales: { y: { grid: { color: '#1e293b' }, ticks: { display: false } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } }
+                    scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } }
                 }
             });
         }
 
-        function updateTables(data) {
+        function renderTables(data) {
             const rutaBody = document.getElementById('rutaTableBody');
             const auxBody = document.getElementById('auxTableBody');
             rutaBody.innerHTML = ''; auxBody.innerHTML = '';
 
-            const routes = [...new Set(data.map(r => r.RUTA))];
+            const routes = [...new Set(data.map(r => getVal(r, 'ruta')))];
             routes.forEach(rt => {
-                const group = data.filter(r => r.RUTA === rt);
-                const s = group.reduce((a, b) => a + (b.CUBETAS || 0), 0);
-                const r = group.reduce((a, b) => a + (b['retorno cubetas'] || 0), 0);
+                const group = data.filter(r => getVal(r, 'ruta') === rt);
+                const s = group.reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0);
+                const r = group.reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0);
                 const p = s > 0 ? ((r/s)*100).toFixed(1) : 0;
-                rutaBody.innerHTML += `<tr class="hover:bg-slate-800/30">
+                rutaBody.innerHTML += `<tr class="hover:bg-slate-800/30 transition-colors">
                     <td class="px-8 py-4 font-bold text-slate-300">${rt}</td>
                     <td class="px-8 py-4 text-center">${s}</td>
                     <td class="px-8 py-4 text-center text-blue-400">${r}</td>
@@ -345,29 +289,19 @@
                 </tr>`;
             });
 
-            const auxs = [...new Set(data.map(r => r.AUXILIAR))].filter(a => a);
+            const auxs = [...new Set(data.map(r => getVal(r, 'aux')))].filter(a => a);
             auxs.forEach(ax => {
-                const group = data.filter(r => r.AUXILIAR === ax);
-                const nov = group.reduce((a, b) => a + (b.TOTAL_NOVEDADES || 0), 0);
-                auxBody.innerHTML += `<tr class="hover:bg-slate-800/30">
-                    <td class="px-8 py-4 font-bold text-blue-200">${ax}</td>
-                    <td class="px-8 py-4 text-center">${group.length}</td>
-                    <td class="px-8 py-4 text-center text-orange-400 font-bold">${nov}</td>
-                    <td class="px-8 py-4 text-center font-bold">${(nov/group.length).toFixed(2)}</td>
-                </tr>`;
+                const group = data.filter(r => getVal(r, 'aux') === ax);
+                const nov = group.reduce((a, b) => a + (getVal(b, 'nov') || 0), 0);
+                auxBody.innerHTML += `<tr><td class="px-8 py-4 font-bold text-blue-200">${ax}</td><td class="px-8 py-4 text-center">${group.length}</td><td class="px-8 py-4 text-center text-orange-400 font-bold">${nov}</td></tr>`;
             });
         }
 
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.getElementById('tab-' + tabId).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active', 'text-white'));
             document.getElementById('btn-' + tabId).classList.add('tab-active');
-        }
-
-        function filterAuxTable() {
-            const q = document.getElementById('searchAux').value.toLowerCase();
-            document.querySelectorAll('#auxTableBody tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none');
         }
     </script>
 </body>
