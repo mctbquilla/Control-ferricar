@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferricar | Dashboard Operativo Pro</title>
+    <title>Ferricar | Dashboard Operativo v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -20,14 +20,14 @@
 
     <div id="loader" class="loading-overlay">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse">LEYENDO GOOGLE SHEETS...</h2>
+        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse">SINCRONIZANDO FILAS...</h2>
     </div>
 
     <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-6 py-4">
         <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-600 rounded-lg"><i data-lucide="database" class="text-white w-6 h-6"></i></div>
-                <h1 class="text-xl font-bold uppercase tracking-tighter">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">CONTROL OPERATIVO</span></h1>
+                <div class="p-2 bg-blue-600 rounded-lg"><i data-lucide="truck" class="text-white w-6 h-6"></i></div>
+                <h1 class="text-xl font-bold uppercase tracking-tighter">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">SISTEMA DE CONTROL</span></h1>
             </div>
             <nav class="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
                 <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold uppercase">Operativo</button>
@@ -48,14 +48,14 @@
                 <div class="bg-blue-500/10 p-4 rounded-full"><i data-lucide="calendar" class="text-blue-500 w-8 h-8"></i></div>
                 <div class="flex-1">
                     <p class="text-xs text-slate-500 font-black uppercase mb-2">Seleccionar Periodo (Mes)</p>
-                    <select id="month-filter" onchange="applyFilters()" class="w-full md:w-64 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500">
-                        <option value="">Cargando meses...</option>
+                    <select id="month-filter" onchange="applyFilters()" class="w-full md:w-64 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                        <option value="">Detectando tabla...</option>
                     </select>
                 </div>
             </div>
         </div>
 
-        <div id="main-content" class="space-y-8">
+        <div id="main-content">
             <!-- KPIs -->
             <div id="tab-operativo" class="tab-content">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -73,7 +73,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center md:text-left">
                     <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-500">
                         <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Cubetas Salieron</p>
                         <div id="kpi-cub-salieron" class="text-2xl font-bold">0</div>
@@ -90,7 +90,7 @@
 
                 <div class="glass-card p-8 rounded-3xl h-[450px]">
                     <h3 class="font-bold mb-8 text-slate-400 uppercase text-xs tracking-widest flex items-center gap-2">
-                        <i data-lucide="line-chart" class="w-4 h-4"></i> Trading Diario de Cubetas
+                        <i data-lucide="line-chart" class="w-4 h-4"></i> Trading Diario
                     </h3>
                     <div class="h-full relative"><canvas id="tradingChart"></canvas></div>
                 </div>
@@ -136,7 +136,7 @@
         let rawData = [];
         let chartInstance = null;
 
-        // Mapeo inteligente de columnas
+        // Mapeo inteligente con soporte para variaciones comunes
         const colMap = {
             mes: ['MES', 'mes', 'Mes'],
             fecha: ['FECHA', 'fecha', 'Fecha'],
@@ -147,7 +147,7 @@
             perc_ret: ['%retorno', '% RETORNO', '% Retorno', 'porcentaje retorno'],
             ruta: ['RUTA', 'ruta', 'Ruta'],
             aux: ['AUXILIAR', 'auxiliar', 'Auxiliar'],
-            nov: ['TOTAL NOVEDADES', 'total novedades', 'Total Novedades', 'TOTAL_NOVEDADES']
+            nov: ['TOTAL NOVEDADES', 'total novedades', 'Total Novedades']
         };
 
         function getVal(row, key) {
@@ -171,27 +171,43 @@
 
                 if (rawData.length > 0) {
                     document.getElementById('status-dot').className = "w-2 h-2 bg-emerald-500 rounded-full";
-                    document.getElementById('status-text').innerText = "Sincronizado";
+                    document.getElementById('status-text').innerText = "Conectado";
                     populateMonthFilter();
                     applyFilters();
                 } else {
-                    throw new Error("CSV vacío");
+                    throw new Error("No se detectaron datos");
                 }
             } catch (error) {
                 console.error(error);
                 document.getElementById('status-dot').className = "w-2 h-2 bg-rose-500 rounded-full";
-                document.getElementById('status-text').innerText = "Error de Datos";
-                alert("No se pudieron leer los datos. Revisa que el enlace de Google Sheets sea correcto.");
+                document.getElementById('status-text').innerText = "Error en Filas";
+                alert("Error: Asegúrate de que la Fila 2 de tu Google Sheet tenga los encabezados (FECHA, MES, etc.)");
             }
             document.getElementById('loader').style.display = 'none';
         }
 
         function parseCSV(text) {
-            const lines = text.split(/\r?\n/);
-            if (lines.length < 2) return [];
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-            return lines.slice(1).filter(l => l.trim() !== '').map(line => {
-                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Soporta comas dentro de comillas
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length < 1) return [];
+
+            // Lógica para encontrar la fila de encabezados automáticamente
+            let headerIndex = -1;
+            for (let i = 0; i < lines.length; i++) {
+                const row = lines[i].toLowerCase();
+                // Buscamos una fila que contenga al menos palabras clave
+                if (row.includes('mes') || row.includes('fecha') || row.includes('planilla')) {
+                    headerIndex = i;
+                    break;
+                }
+            }
+
+            if (headerIndex === -1) return []; // No se encontró encabezado
+
+            const headers = lines[headerIndex].split(',').map(h => h.trim().replace(/"/g, ''));
+            
+            // Empezamos a procesar desde la siguiente fila después del encabezado
+            return lines.slice(headerIndex + 1).map(line => {
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 let obj = {};
                 headers.forEach((h, i) => {
                     let val = values[i] ? values[i].trim().replace(/"/g, '') : "";
@@ -203,7 +219,6 @@
 
         function populateMonthFilter() {
             const select = document.getElementById('month-filter');
-            // Buscamos la columna MES con el mapeo inteligente
             const months = [...new Set(rawData.map(r => getVal(r, 'mes')))].filter(m => m && m !== 0);
             
             if (months.length === 0) {
@@ -239,7 +254,7 @@
 
             document.getElementById('kpi-cub-salieron').innerText = cS;
             document.getElementById('kpi-cub-ingresaron').innerText = cR;
-            document.getElementById('kpi-perc-global').innerText = ((cR/cS)*100 || 0).toFixed(1) + "%";
+            document.getElementById('kpi-perc-global').innerText = cS > 0 ? ((cR/cS)*100).toFixed(1) + "%" : "0%";
 
             renderChart(data);
             renderTables(data);
@@ -261,12 +276,7 @@
                         { label: 'Retorno', data: r, borderColor: '#fbbf24', tension: 0.4 }
                     ]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
             });
         }
 
