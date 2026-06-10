@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferricar | Dashboard Operativo v3</title>
+    <title>Ferricar | Control Operativo Total</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,21 +18,23 @@
 </head>
 <body class="min-h-screen">
 
+    <!-- Cargador -->
     <div id="loader" class="loading-overlay">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse">SINCRONIZANDO FILAS...</h2>
+        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse uppercase">Procesando Datos Reales...</h2>
     </div>
 
+    <!-- Navegación -->
     <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-6 py-4">
         <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-3">
                 <div class="p-2 bg-blue-600 rounded-lg"><i data-lucide="truck" class="text-white w-6 h-6"></i></div>
-                <h1 class="text-xl font-bold uppercase tracking-tighter">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">SISTEMA DE CONTROL</span></h1>
+                <h1 class="text-xl font-bold uppercase">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">OPERACIÓN</span></h1>
             </div>
             <nav class="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
-                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold uppercase">Operativo</button>
-                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase">Activos</button>
-                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase">Auxiliares</button>
+                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold uppercase transition-all">Operativo</button>
+                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase transition-all">Activos</button>
+                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase transition-all">Auxiliares</button>
             </nav>
             <div id="conn-status" class="flex items-center gap-2 text-[10px] font-black uppercase py-2 px-4 rounded-full bg-slate-800 border border-slate-700">
                 <span id="status-dot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
@@ -42,69 +44,62 @@
     </header>
 
     <main class="max-w-[1600px] mx-auto p-6">
-        <!-- SELECTOR DE MES -->
+        <!-- Selector Mes -->
         <div class="glass-card rounded-2xl p-8 mb-8 border-l-4 border-blue-500">
-            <div class="flex flex-col md:flex-row md:items-center gap-6">
-                <div class="bg-blue-500/10 p-4 rounded-full"><i data-lucide="calendar" class="text-blue-500 w-8 h-8"></i></div>
-                <div class="flex-1">
-                    <p class="text-xs text-slate-500 font-black uppercase mb-2">Seleccionar Periodo (Mes)</p>
-                    <select id="month-filter" onchange="applyFilters()" class="w-full md:w-64 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                        <option value="">Detectando tabla...</option>
-                    </select>
-                </div>
-            </div>
+            <p class="text-xs text-slate-500 font-black uppercase mb-2 tracking-widest">Periodo de Análisis</p>
+            <select id="month-filter" onchange="applyFilters()" class="w-full md:w-80 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <option value="">Esperando tabla...</option>
+            </select>
         </div>
 
         <div id="main-content">
-            <!-- KPIs -->
+            <!-- PANEL OPERATIVO -->
             <div id="tab-operativo" class="tab-content">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase mb-4">Total Planillas</p>
+                        <p class="text-xs font-black text-slate-500 uppercase mb-4 tracking-widest">Total Planillas</p>
                         <div id="kpi-planillas" class="text-5xl font-bold text-white">0</div>
                     </div>
                     <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase mb-4">% Retorno Cubetas</p>
+                        <p class="text-xs font-black text-slate-500 uppercase mb-4 tracking-widest">% Promedio Retorno</p>
                         <div id="kpi-perc-retorno-cubetas" class="text-5xl font-bold text-blue-400">0%</div>
                     </div>
                     <div id="card-neveras" class="glass-card p-8 rounded-3xl border-b-4">
-                        <p id="label-neveras" class="text-xs font-black uppercase mb-4">Balance Neveras</p>
-                        <div id="kpi-neveras-diff" class="text-5xl font-bold">0</div>
+                        <p id="label-neveras" class="text-xs font-black uppercase mb-4 tracking-widest">Balance Neveras</p>
+                        <div id="kpi-neveras-diff" class="text-5xl font-bold text-white">0</div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center md:text-left">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-500">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Cubetas Salieron</p>
-                        <div id="kpi-cub-salieron" class="text-2xl font-bold">0</div>
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Total Cubetas Salieron</p>
+                        <div id="kpi-cub-salieron" class="text-3xl font-bold">0</div>
                     </div>
                     <div class="glass-card p-6 rounded-2xl border-l-4 border-amber-500">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Cubetas Ingresaron</p>
-                        <div id="kpi-cub-ingresaron" class="text-2xl font-bold">0</div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl border-l-4 border-emerald-500">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">% Global Mensual</p>
-                        <div id="kpi-perc-global" class="text-2xl font-bold">0%</div>
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Total Cubetas Ingresaron</p>
+                        <div id="kpi-cub-ingresaron" class="text-3xl font-bold text-amber-500">0</div>
                     </div>
                 </div>
 
                 <div class="glass-card p-8 rounded-3xl h-[450px]">
                     <h3 class="font-bold mb-8 text-slate-400 uppercase text-xs tracking-widest flex items-center gap-2">
-                        <i data-lucide="line-chart" class="w-4 h-4"></i> Trading Diario
+                        <i data-lucide="line-chart"></i> Trading de Retorno Diario (Cubetas)
                     </h3>
                     <div class="h-full relative"><canvas id="tradingChart"></canvas></div>
                 </div>
             </div>
 
-            <!-- TABLAS -->
+            <!-- PANEL ACTIVOS (PLÁSTICAS) -->
             <div id="tab-plasticas" class="tab-content hidden">
-                <div class="glass-card rounded-3xl overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-900/50 text-slate-500 uppercase text-[10px] font-black">
+                <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/80 text-slate-500 uppercase text-[10px] font-black">
                             <tr>
                                 <th class="px-8 py-5">Ruta</th>
-                                <th class="px-8 py-5 text-center">Despacho</th>
-                                <th class="px-8 py-5 text-center">Retorno</th>
+                                <th class="px-8 py-5 text-center">Cubetas Despacho</th>
+                                <th class="px-8 py-5 text-center">Cubetas Retorno</th>
+                                <th class="px-8 py-5 text-center">Neveras Despacho</th>
+                                <th class="px-8 py-5 text-center">Neveras Retorno</th>
                                 <th class="px-8 py-5 text-center">Eficiencia</th>
                             </tr>
                         </thead>
@@ -113,14 +108,17 @@
                 </div>
             </div>
 
+            <!-- PANEL AUXILIARES -->
             <div id="tab-auxiliares" class="tab-content hidden">
-                <div class="glass-card rounded-3xl overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-900/50 text-slate-500 uppercase text-[10px] font-black">
+                <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/80 text-slate-500 uppercase text-[10px] font-black">
                             <tr>
-                                <th class="px-8 py-5">Auxiliar</th>
-                                <th class="px-8 py-5 text-center">Viajes</th>
-                                <th class="px-8 py-5 text-center">Novedades</th>
+                                <th class="px-8 py-5">Nombre Auxiliar</th>
+                                <th class="px-8 py-5 text-center">Total Planillas</th>
+                                <th class="px-8 py-5 text-center text-orange-400">Total Novedades</th>
+                                <th class="px-8 py-5 text-center">Pts. Cerrados</th>
+                                <th class="px-8 py-5 text-center">Incidencia (%)</th>
                             </tr>
                         </thead>
                         <tbody id="auxTableBody" class="divide-y divide-slate-800"></tbody>
@@ -136,26 +134,27 @@
         let rawData = [];
         let chartInstance = null;
 
-        // Mapeo inteligente con soporte para variaciones comunes
+        // MAPEO EXACTO BASADO EN TU ESTRUCTURA
         const colMap = {
-            mes: ['MES', 'mes', 'Mes'],
-            fecha: ['FECHA', 'fecha', 'Fecha'],
-            cubetas: ['CUBETAS', 'cubetas', 'Cubetas'],
-            neveras: ['NEVERAS', 'neveras', 'Neveras'],
-            ret_cub: ['retorno cubetas', 'RETORNO CUBETAS', 'Retorno cubetas', 'retorno_cubetas'],
-            ret_nev: ['Retorno neveras', 'RETORNO NEVERAS', 'retorno neveras', 'Retorno_neveras'],
-            perc_ret: ['%retorno', '% RETORNO', '% Retorno', 'porcentaje retorno'],
-            ruta: ['RUTA', 'ruta', 'Ruta'],
-            aux: ['AUXILIAR', 'auxiliar', 'Auxiliar'],
-            nov: ['TOTAL NOVEDADES', 'total novedades', 'Total Novedades']
+            mes: 'MES',
+            fecha: 'FECHA',
+            cubetas: 'CUBETAS',
+            neveras: 'NEVERAS',
+            ret_cub: 'retorno cubetas',
+            ret_nev: 'Retorno neveras',
+            perc_ret: '%retorno',
+            ruta: 'RUTA',
+            aux: 'AUXILIAR',
+            nov: 'TOTAL NOVEDADES',
+            pts_cer: 'PUNTOS CERRADOS'
         };
 
-        function getVal(row, key) {
-            const possibleNames = colMap[key];
-            for (let name of possibleNames) {
-                if (row[name] !== undefined) return row[name];
-            }
-            return 0;
+        // Función para limpiar números (quita %, espacios, convierte comas en puntos)
+        function cleanNum(val) {
+            if (typeof val === 'number') return val;
+            if (!val || val === "") return 0;
+            let cleaned = val.toString().replace('%', '').replace(/ /g, '').replace(',', '.');
+            return parseFloat(cleaned) || 0;
         }
 
         window.onload = () => {
@@ -171,47 +170,30 @@
 
                 if (rawData.length > 0) {
                     document.getElementById('status-dot').className = "w-2 h-2 bg-emerald-500 rounded-full";
-                    document.getElementById('status-text').innerText = "Conectado";
+                    document.getElementById('status-text').innerText = "Sincronizado";
                     populateMonthFilter();
                     applyFilters();
-                } else {
-                    throw new Error("No se detectaron datos");
                 }
             } catch (error) {
                 console.error(error);
                 document.getElementById('status-dot').className = "w-2 h-2 bg-rose-500 rounded-full";
-                document.getElementById('status-text').innerText = "Error en Filas";
-                alert("Error: Asegúrate de que la Fila 2 de tu Google Sheet tenga los encabezados (FECHA, MES, etc.)");
+                document.getElementById('status-text').innerText = "Error de Datos";
             }
             document.getElementById('loader').style.display = 'none';
         }
 
         function parseCSV(text) {
             const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-            if (lines.length < 1) return [];
-
-            // Lógica para encontrar la fila de encabezados automáticamente
-            let headerIndex = -1;
-            for (let i = 0; i < lines.length; i++) {
-                const row = lines[i].toLowerCase();
-                // Buscamos una fila que contenga al menos palabras clave
-                if (row.includes('mes') || row.includes('fecha') || row.includes('planilla')) {
-                    headerIndex = i;
-                    break;
-                }
-            }
-
-            if (headerIndex === -1) return []; // No se encontró encabezado
+            let headerIndex = lines.findIndex(l => l.toLowerCase().includes('mes'));
+            if (headerIndex === -1) return [];
 
             const headers = lines[headerIndex].split(',').map(h => h.trim().replace(/"/g, ''));
             
-            // Empezamos a procesar desde la siguiente fila después del encabezado
             return lines.slice(headerIndex + 1).map(line => {
                 const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 let obj = {};
                 headers.forEach((h, i) => {
-                    let val = values[i] ? values[i].trim().replace(/"/g, '') : "";
-                    obj[h] = isNaN(val) || val === "" ? val : parseFloat(val);
+                    obj[h] = values[i] ? values[i].trim().replace(/"/g, '') : "";
                 });
                 return obj;
             });
@@ -219,29 +201,25 @@
 
         function populateMonthFilter() {
             const select = document.getElementById('month-filter');
-            const months = [...new Set(rawData.map(r => getVal(r, 'mes')))].filter(m => m && m !== 0);
-            
-            if (months.length === 0) {
-                select.innerHTML = '<option value="">No se halló col. MES</option>';
-                return;
-            }
+            const months = [...new Set(rawData.map(r => r[colMap.mes]))].filter(m => m);
             select.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
             select.value = months[months.length - 1];
         }
 
         function applyFilters() {
             const month = document.getElementById('month-filter').value;
-            const filtered = rawData.filter(r => getVal(r, 'mes') === month);
+            const filtered = rawData.filter(r => r[colMap.mes] === month);
             updateDashboard(filtered);
         }
 
         function updateDashboard(data) {
+            // Totales KPI
             const total = data.length;
-            const cS = data.reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0);
-            const cR = data.reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0);
-            const nS = data.reduce((a, b) => a + (getVal(b, 'neveras') || 0), 0);
-            const nR = data.reduce((a, b) => a + (getVal(b, 'ret_nev') || 0), 0);
-            const pSum = data.reduce((a, b) => a + (getVal(b, 'perc_ret') || 0), 0);
+            const cS = data.reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0);
+            const cR = data.reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0);
+            const nS = data.reduce((a, b) => a + cleanNum(b[colMap.neveras]), 0);
+            const nR = data.reduce((a, b) => a + cleanNum(b[colMap.ret_nev]), 0);
+            const pSum = data.reduce((a, b) => a + cleanNum(b[colMap.perc_ret]), 0);
 
             document.getElementById('kpi-planillas').innerText = total;
             document.getElementById('kpi-perc-retorno-cubetas').innerText = (pSum/total || 0).toFixed(1) + "%";
@@ -261,22 +239,27 @@
         }
 
         function renderChart(data) {
-            const days = [...new Set(data.map(r => getVal(r, 'fecha')))].sort();
-            const s = days.map(d => data.filter(r => getVal(r, 'fecha') === d).reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0));
-            const r = days.map(d => data.filter(r => getVal(r, 'fecha') === d).reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0));
+            const days = [...new Set(data.map(r => r[colMap.fecha]))].sort();
+            const s = days.map(d => data.filter(r => r[colMap.fecha] === d).reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0));
+            const r = days.map(d => data.filter(r => r[colMap.fecha] === d).reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0));
 
             const ctx = document.getElementById('tradingChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: days.map(d => d.toString().split('-').pop()),
+                    labels: days.map(d => d.split('-').pop() || d),
                     datasets: [
-                        { label: 'Salida', data: s, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
+                        { label: 'Despacho', data: s, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
                         { label: 'Retorno', data: r, borderColor: '#fbbf24', tension: 0.4 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } }
+                }
             });
         }
 
@@ -285,25 +268,49 @@
             const auxBody = document.getElementById('auxTableBody');
             rutaBody.innerHTML = ''; auxBody.innerHTML = '';
 
-            const routes = [...new Set(data.map(r => getVal(r, 'ruta')))];
+            // Lógica Tabla Activos
+            const routes = [...new Set(data.map(r => r[colMap.ruta]))].filter(r => r);
             routes.forEach(rt => {
-                const group = data.filter(r => getVal(r, 'ruta') === rt);
-                const s = group.reduce((a, b) => a + (getVal(b, 'cubetas') || 0), 0);
-                const r = group.reduce((a, b) => a + (getVal(b, 'ret_cub') || 0), 0);
-                const p = s > 0 ? ((r/s)*100).toFixed(1) : 0;
-                rutaBody.innerHTML += `<tr class="hover:bg-slate-800/30 transition-colors">
+                const group = data.filter(r => r[colMap.ruta] === rt);
+                const cDesp = group.reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0);
+                const cRet = group.reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0);
+                const nDesp = group.reduce((a, b) => a + cleanNum(b[colMap.neveras]), 0);
+                const nRet = group.reduce((a, b) => a + cleanNum(b[colMap.ret_nev]), 0);
+                const p = cDesp > 0 ? ((cRet/cDesp)*100).toFixed(1) : 0;
+                
+                rutaBody.innerHTML += `<tr class="hover:bg-slate-800/30">
                     <td class="px-8 py-4 font-bold text-slate-300">${rt}</td>
-                    <td class="px-8 py-4 text-center">${s}</td>
-                    <td class="px-8 py-4 text-center text-blue-400">${r}</td>
+                    <td class="px-8 py-4 text-center">${cDesp}</td>
+                    <td class="px-8 py-4 text-center text-blue-400">${cRet}</td>
+                    <td class="px-8 py-4 text-center">${nDesp}</td>
+                    <td class="px-8 py-4 text-center text-emerald-400">${nRet}</td>
                     <td class="px-8 py-4 text-center font-black ${p < 90 ? 'text-rose-500' : 'text-emerald-500'}">${p}%</td>
                 </tr>`;
             });
 
-            const auxs = [...new Set(data.map(r => getVal(r, 'aux')))].filter(a => a);
+            // Lógica Tabla Auxiliares
+            const auxs = [...new Set(data.map(r => r[colMap.aux]))].filter(a => a);
             auxs.forEach(ax => {
-                const group = data.filter(r => getVal(r, 'aux') === ax);
-                const nov = group.reduce((a, b) => a + (getVal(b, 'nov') || 0), 0);
-                auxBody.innerHTML += `<tr><td class="px-8 py-4 font-bold text-blue-200">${ax}</td><td class="px-8 py-4 text-center">${group.length}</td><td class="px-8 py-4 text-center text-orange-400 font-bold">${nov}</td></tr>`;
+                const group = data.filter(r => r[colMap.aux] === ax);
+                const planillas = group.length;
+                const novs = group.reduce((a, b) => a + cleanNum(b[colMap.nov]), 0);
+                const cerr = group.reduce((a, b) => a + cleanNum(b[colMap.pts_cer]), 0);
+                const incidencia = planillas > 0 ? ((novs/planillas)*10).toFixed(1) : 0; // Escala de 0 a 100
+
+                auxBody.innerHTML += `<tr class="hover:bg-slate-800/30">
+                    <td class="px-8 py-4 font-bold text-blue-200">${ax}</td>
+                    <td class="px-8 py-4 text-center">${planillas}</td>
+                    <td class="px-8 py-4 text-center text-orange-400 font-bold">${novs}</td>
+                    <td class="px-8 py-4 text-center">${cerr}</td>
+                    <td class="px-8 py-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-blue-500 h-full" style="width: ${100 - incidencia}%"></div>
+                            </div>
+                            <span class="text-[10px] font-bold">${(100 - incidencia).toFixed(0)}%</span>
+                        </div>
+                    </td>
+                </tr>`;
             });
         }
 
@@ -312,6 +319,7 @@
             document.getElementById('tab-' + tabId).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active', 'text-white'));
             document.getElementById('btn-' + tabId).classList.add('tab-active');
+            lucide.createIcons();
         }
     </script>
 </body>
