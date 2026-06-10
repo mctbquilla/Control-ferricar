@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferricar | Control Operativo Mensual</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --card-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .kpi-value { font-size: 2.5rem; font-weight: 700; }
+
+        /* Estilo para el selector de mes */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em;
+        }
+
+        .loading-overlay {
+            background: #020617;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Cargador -->
+    <div id="loader" class="fixed inset-0 flex flex-col items-center justify-center loading-overlay transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 class="text-blue-500 font-bold tracking-tighter text-xl animate-pulse">Sincronizando Ferricar...</h2>
+    </div>
+
+    <!-- Navegación -->
+    <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-6 py-3">
+        <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-600 rounded-lg">
+                    <i data-lucide="bar-chart-3" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold">FERRICAR <span class="text-blue-400 font-light">| CONTROL OPERATIVO</span></h1>
+                </div>
+            </div>
+
+            <nav class="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
+                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-5 py-2 rounded-lg text-sm font-semibold transition-all">Resumen General</button>
+                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-5 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-white transition-all">Análisis de Activos</button>
+                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-5 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-white transition-all">Personal/Auxiliares</button>
+            </nav>
+
+            <button onclick="fetchData()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-slate-700">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i> Recargar Datos
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-[1600px] mx-auto p-6">
+
+        <!-- FILTRO POR MES (ÚNICO FILTRO) -->
+        <div class="glass-card rounded-2xl p-6 mb-8 border-l-4 border-blue-500 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-500/10 p-3 rounded-full">
+                    <i data-lucide="calendar" class="text-blue-500 w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm text-slate-500 font-bold uppercase tracking-widest">Periodo de Análisis</h3>
+                    <select id="month-filter" onchange="applyFilters()" class="bg-transparent text-2xl font-bold text-white outline-none cursor-pointer pr-10">
+                        <option value="CARGANDO">Cargando meses...</option>
+                    </select>
+                </div>
+            </div>
+            <div id="data-status" class="hidden md:block text-right">
+                <p class="text-xs text-slate-500 uppercase font-bold">Estado de Información</p>
+                <p class="text-emerald-400 text-sm flex items-center gap-1 justify-end">
+                    <span class="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span> Sincronizado en Tiempo Real
+                </p>
+            </div>
+        </div>
+
+        <!-- CONTENIDO: CONTROL OPERATIVO -->
+        <div id="tab-operativo" class="tab-content animate-in fade-in duration-500">
+            <!-- Fila 1 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="glass-card p-6 rounded-2xl border-b-2 border-blue-500">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">Total Planillas</p>
+                    <div id="kpi-planillas" class="kpi-value text-white">0</div>
+                    <p id="kpi-planillas-sub" class="text-xs text-blue-400 mt-2 font-bold"></p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl border-b-2 border-slate-500">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">% Retorno Cubetas (Promedio)</p>
+                    <div id="kpi-perc-retorno-cubetas" class="kpi-value text-white">0%</div>
+                </div>
+                <div id="card-neveras" class="glass-card p-6 rounded-2xl border-b-2">
+                    <p id="label-neveras" class="text-xs font-bold uppercase mb-2">Balance Neveras</p>
+                    <div id="kpi-neveras-diff" class="kpi-value">0</div>
+                    <p id="sub-neveras" class="text-xs mt-2 font-bold italic"></p>
+                </div>
+            </div>
+
+            <!-- Fila 2 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-500">
+                    <p class="text-xs font-bold text-cyan-400 uppercase mb-2">Cubetas Salieron</p>
+                    <div id="kpi-cub-salieron" class="kpi-value">0</div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-amber-500">
+                    <p class="text-xs font-bold text-amber-500 uppercase mb-2">Cubetas Ingresaron</p>
+                    <div id="kpi-cub-ingresaron" class="kpi-value">0</div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-emerald-500">
+                    <p class="text-xs font-bold text-emerald-500 uppercase mb-2">% Global de Retorno</p>
+                    <div id="kpi-perc-global" class="kpi-value">0%</div>
+                </div>
+            </div>
+
+            <!-- Gráfico Trading -->
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="font-bold flex items-center gap-2 mb-6">
+                    <i data-lucide="activity" class="text-blue-500"></i> Balance Diario de Movimiento de Cubetas
+                </h3>
+                <div class="h-[400px]">
+                    <canvas id="tradingChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENIDO: ANÁLISIS ACTIVOS -->
+        <div id="tab-plasticas" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase">Comparativa Cubetas: Salida vs Retorno</h3>
+                    <div class="h-[300px]"><canvas id="barCubetas"></canvas></div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase">Comparativa Neveras: Salida vs Retorno</h3>
+                    <div class="h-[300px]"><canvas id="barNeveras"></canvas></div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="p-6 bg-slate-900/50 border-b border-slate-800">
+                    <h3 class="font-bold">Ranking de Eficiencia por Ruta</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-widest font-black">
+                            <tr>
+                                <th class="px-6 py-4">Ruta</th>
+                                <th class="px-6 py-4">Responsable (Conductor)</th>
+                                <th class="px-6 py-4 text-center">Salida</th>
+                                <th class="px-6 py-4 text-center">Retorno</th>
+                                <th class="px-6 py-4 text-center">% Eficiencia</th>
+                                <th class="px-6 py-4 text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rutaTableBody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENIDO: AUXILIARES -->
+        <div id="tab-auxiliares" class="tab-content hidden">
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <h3 class="font-bold text-xl">Gestión de Auxiliares</h3>
+                    <div class="relative w-full md:w-80">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-500"></i>
+                        <input type="text" id="searchAux" onkeyup="filterAuxTable()" placeholder="Buscar por nombre..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm outline-none">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-black">
+                            <tr>
+                                <th class="px-6 py-4">Nombre del Auxiliar</th>
+                                <th class="px-6 py-4 text-center">Planillas</th>
+                                <th class="px-6 py-4 text-center text-orange-400">Total Novedades</th>
+                                <th class="px-6 py-4 text-center">Ptos Cerrados</th>
+                                <th class="px-6 py-4 text-center">No Entregado</th>
+                                <th class="px-6 py-4 text-center">Nivel de Incidencia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auxTableBody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // URL Convertida a CSV para lectura directa
+        const GOOGLE_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQEKeP2MiCBr44H8Ib1DebEqAz77tFEzKfgLxX6ygxixdQRyMNyhqQU63yNl-SBj3W1MjOYlMPhLkK/pub?output=csv';
+        
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+
+        window.onload = () => {
+            lucide.createIcons();
+            fetchData();
+        };
+
+        async function fetchData() {
+            showLoader(true);
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV);
+                const csvText = await response.text();
+                rawData = parseCSV(csvText);
+                
+                populateMonthFilter();
+                applyFilters();
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+                alert("Hubo un error al conectar con Google Sheets.");
+            }
+            setTimeout(() => showLoader(false), 800);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            return lines.slice(1).filter(l => l.trim() !== '').map(line => {
+                const values = line.split(',');
+                let obj = {};
+                headers.forEach((h, i) => {
+                    let val = values[i] ? values[i].trim() : "";
+                    obj[h] = isNaN(val) || val === "" ? val : parseFloat(val);
+                });
+                return obj;
+            });
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('month-filter');
+            // Obtener meses únicos presentes en la columna "MES"
+            const uniqueMonths = [...new Set(rawData.map(item => item.MES))].filter(m => m);
+            
+            select.innerHTML = uniqueMonths.map(m => `<option value="${m}">${m}</option>`).join('');
+            
+            // Seleccionar por defecto el último mes de la lista
+            if(uniqueMonths.length > 0) select.value = uniqueMonths[uniqueMonths.length - 1];
+        }
+
+        function applyFilters() {
+            const selectedMonth = document.getElementById('month-filter').value;
+            filteredData = rawData.filter(row => row.MES === selectedMonth);
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            calculateKPIs();
+            renderTradingChart();
+            renderPlasticsCharts();
+            renderRutasTable();
+            renderAuxiliarTable();
+        }
+
+        function calculateKPIs() {
+            const total = filteredData.length;
+            const urb = filteredData.filter(r => r.OPERACIÓN === 'URB').length;
+            const prov = filteredData.filter(r => r.OPERACIÓN === 'PROV').length;
+
+            const cubSalieron = filteredData.reduce((acc, r) => acc + (r.CUBETAS || 0), 0);
+            const cubEntraron = filteredData.reduce((acc, r) => acc + (r['retorno cubetas'] || 0), 0);
+            const nevSalieron = filteredData.reduce((acc, r) => acc + (r.NEVERAS || 0), 0);
+            const nevEntraron = filteredData.reduce((acc, r) => acc + (r['Retorno neveras'] || 0), 0);
+
+            // % Promedio de retorno de cubetas (columna %retorno)
+            const sumPercRetorno = filteredData.reduce((acc, r) => acc + (r['%retorno'] || 0), 0);
+            const avgPercRetorno = total > 0 ? (sumPercRetorno / total).toFixed(1) : 0;
+
+            document.getElementById('kpi-planillas').innerText = total;
+            document.getElementById('kpi-planillas-sub').innerText = `${urb} URB · ${prov} PROV`;
+            document.getElementById('kpi-perc-retorno-cubetas').innerText = avgPercRetorno + "%";
+            
+            const nevDiff = nevEntraron - nevSalieron;
+            const nevCard = document.getElementById('card-neveras');
+            const nevLabel = document.getElementById('label-neveras');
+            const nevSub = document.getElementById('sub-neveras');
+
+            if (nevDiff < 0) {
+                nevLabel.innerText = "Neveras Faltantes";
+                nevLabel.className = "text-xs font-bold text-rose-400 uppercase mb-2";
+                nevCard.className = "glass-card p-6 rounded-2xl border-b-2 border-rose-500 text-rose-400";
+                nevSub.innerText = "Unidades por recuperar";
+            } else {
+                nevLabel.innerText = "Neveras de Más";
+                nevLabel.className = "text-xs font-bold text-emerald-400 uppercase mb-2";
+                nevCard.className = "glass-card p-6 rounded-2xl border-b-2 border-emerald-500 text-emerald-400";
+                nevSub.innerText = "Excedente en almacén";
+            }
+            document.getElementById('kpi-neveras-diff').innerText = Math.abs(nevDiff);
+
+            document.getElementById('kpi-cub-salieron').innerText = cubSalieron;
+            document.getElementById('kpi-cub-ingresaron').innerText = cubEntraron;
+            document.getElementById('kpi-perc-global').innerText = cubSalieron > 0 ? ((cubEntraron/cubSalieron)*100).toFixed(1) + "%" : "0%";
+        }
+
+        function renderTradingChart() {
+            const ctx = document.getElementById('tradingChart').getContext('2d');
+            
+            const dataMap = filteredData.reduce((acc, r) => {
+                const date = r.FECHA;
+                if(!acc[date]) acc[date] = { s: 0, r: 0 };
+                acc[date].s += r.CUBETAS || 0;
+                acc[date].r += r['retorno cubetas'] || 0;
+                return acc;
+            }, {});
+
+            const labels = Object.keys(dataMap).sort();
+            const dataSalida = labels.map(l => dataMap[l].s);
+            const dataRetorno = labels.map(l => dataMap[l].r);
+
+            if(charts.trading) charts.trading.destroy();
+            charts.trading = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Salieron', data: dataSalida, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Retornaron', data: dataRetorno, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                    }
+                }
+            });
+        }
+
+        function renderPlasticsCharts() {
+            // Agrupar por ruta para el análisis de barras
+            const rutaMap = filteredData.reduce((acc, r) => {
+                const ruta = r.RUTA || 'S/R';
+                if(!acc[ruta]) acc[ruta] = { cs: 0, cr: 0, ns: 0, nr: 0 };
+                acc[ruta].cs += r.CUBETAS || 0;
+                acc[ruta].cr += r['retorno cubetas'] || 0;
+                acc[ruta].ns += r.NEVERAS || 0;
+                acc[ruta].nr += r['Retorno neveras'] || 0;
+                return acc;
+            }, {});
+
+            const labels = Object.keys(rutaMap);
+
+            if(charts.barC) charts.barC.destroy();
+            charts.barC = new Chart(document.getElementById('barCubetas').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Salida', data: labels.map(l => rutaMap[l].cs), backgroundColor: '#3b82f6' },
+                        { label: 'Retorno', data: labels.map(l => rutaMap[l].cr), backgroundColor: '#1e293b' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+            });
+
+            if(charts.barN) charts.barN.destroy();
+            charts.barN = new Chart(document.getElementById('barNeveras').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Salida', data: labels.map(l => rutaMap[l].ns), backgroundColor: '#f43f5e' },
+                        { label: 'Retorno', data: labels.map(l => rutaMap[l].nr), backgroundColor: '#1e293b' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+            });
+        }
+
+        function renderRutasTable() {
+            const table = document.getElementById('rutaTableBody');
+            const metrics = filteredData.reduce((acc, r) => {
+                const key = r.RUTA;
+                if(!acc[key]) acc[key] = { ruta: key, cond: r.CONDUCTOR, s: 0, r: 0 };
+                acc[key].s += r.CUBETAS || 0;
+                acc[key].r += r['retorno cubetas'] || 0;
+                return acc;
+            }, {});
+
+            table.innerHTML = Object.values(metrics).map(m => {
+                const perc = m.s > 0 ? ((m.r / m.s) * 100).toFixed(1) : 0;
+                const status = perc >= 95 ? 'OPTIMO' : (perc >= 85 ? 'ACEPTABLE' : 'CRITICO');
+                const color = perc >= 95 ? 'text-emerald-400' : (perc >= 85 ? 'text-amber-400' : 'text-rose-400');
+                
+                return `
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="px-6 py-4 font-bold">${m.ruta}</td>
+                        <td class="px-6 py-4 text-slate-400 font-medium">${m.cond}</td>
+                        <td class="px-6 py-4 text-center font-bold text-slate-300">${m.s}</td>
+                        <td class="px-6 py-4 text-center font-bold text-blue-400">${m.r}</td>
+                        <td class="px-6 py-4 text-center font-black ${color}">${perc}%</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-[9px] px-2 py-1 rounded-full border border-current font-bold ${color}">${status}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderAuxiliarTable() {
+            const table = document.getElementById('auxTableBody');
+            const metrics = filteredData.reduce((acc, r) => {
+                const key = r.AUXILIAR || 'SIN ASIGNAR';
+                if(!acc[key]) acc[key] = { name: key, count: 0, nov: 0, cerr: 0, hor: 0 };
+                acc[key].count++;
+                acc[key].nov += r.TOTAL_NOVEDADES || 0;
+                acc[key].cerr += r.PUNTOS_CERRADOS || 0;
+                acc[key].hor += r.NO_ENTREGADO_O_POR_HORARIO || 0;
+                return acc;
+            }, {});
+
+            table.innerHTML = Object.values(metrics).map(a => `
+                <tr class="hover:bg-slate-800/40 transition-colors">
+                    <td class="px-6 py-4 font-bold text-blue-100">${a.name}</td>
+                    <td class="px-6 py-4 text-center font-bold text-slate-400">${a.count}</td>
+                    <td class="px-6 py-4 text-center font-bold text-orange-400">${a.nov}</td>
+                    <td class="px-6 py-4 text-center text-slate-400">${a.cerr}</td>
+                    <td class="px-6 py-4 text-center text-slate-400">${a.hor}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="font-bold ${a.nov/a.count > 1 ? 'text-rose-500' : 'text-emerald-500'}">
+                            ${(a.nov/a.count).toFixed(2)} pts
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAuxTable() {
+            const query = document.getElementById('searchAux').value.toLowerCase();
+            const rows = document.querySelectorAll('#auxTableBody tr');
+            rows.forEach(r => r.style.display = r.innerText.toLowerCase().includes(query) ? '' : 'none');
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        }
+
+        function showLoader(show) {
+            const loader = document.getElementById('loader');
+            loader.style.opacity = show ? '1' : '0';
+            loader.style.pointerEvents = show ? 'all' : 'none';
+        }
+    </script>
+</body>
+</html>
