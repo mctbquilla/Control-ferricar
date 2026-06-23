@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Dashboard | Control de Retorno</title>
-    <!-- Tailwind CSS para el estilizado rápido y profesional -->
+    <title>Dashboard Logístico | Control de Retornos</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para las visualizaciones -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -27,16 +25,17 @@
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
         }
         select {
             background-color: #2a2a2a;
             border: 1px solid #444;
             color: white;
-            padding: 0.5rem;
-            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             outline: none;
             cursor: pointer;
+            min-width: 120px;
         }
         select:hover { border-color: var(--accent-blue); }
         .loader {
@@ -48,36 +47,29 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #121212; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
-<body class="p-4 md:p-6 lg:p-8">
+<body class="p-4 md:p-8">
 
-    <!-- HEADER SECTION -->
+    <!-- HEADER & FILTROS -->
     <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
         <div>
             <div class="flex items-center gap-3">
-                <h1 class="text-3xl font-bold tracking-tight">Analytics <span class="text-blue-500">Logística</span></h1>
+                <h1 class="text-3xl font-bold tracking-tight">Analytics <span class="text-blue-500">Operativo</span></h1>
                 <div id="syncIndicator" class="hidden loader"></div>
             </div>
-            <p class="text-gray-500 text-sm mt-1">Control de retorno de Cubetas y Neveras en tiempo real</p>
+            <p class="text-gray-500 text-sm mt-1">Control de Retorno (Datos consolidados por Mes)</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-            <!-- Sincronización -->
-            <div class="flex flex-col mr-4">
-                <span id="lastUpdate" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-right">Actualizado: --:--</span>
-                <button onclick="fetchData()" class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg transition text-sm border border-zinc-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M18 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-                    Sincronizar Data
+            <div class="flex flex-col mr-2">
+                <span id="lastUpdate" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-right">Actualización: --:--</span>
+                <button onclick="fetchData()" class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg transition text-sm border border-zinc-700 mt-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M18 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    Refrescar
                 </button>
             </div>
 
-            <!-- Filtros -->
             <div class="grid grid-cols-2 md:flex gap-2 w-full md:w-auto">
                 <select id="filterMes" onchange="applyFilters()"><option value="">Mes</option></select>
                 <select id="filterRuta" onchange="applyFilters()"><option value="">Ruta</option></select>
@@ -87,308 +79,109 @@
         </div>
     </header>
 
-    <!-- KPI CARDS GRID -->
+    <!-- KPI CARDS -->
     <main>
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <!-- CUBETAS -->
             <div class="card-glass p-5 border-l-4 border-amber-500">
-                <p class="text-xs text-gray-400 font-bold uppercase">Cubetas Salida</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cubetas Salida</p>
                 <h2 id="kpi-c-out" class="text-3xl font-bold text-amber-500 mt-1">0</h2>
             </div>
             <div class="card-glass p-5 border-l-4 border-amber-400">
-                <p class="text-xs text-gray-400 font-bold uppercase">Cubetas Retorno</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cubetas Retorno</p>
                 <h2 id="kpi-c-in" class="text-3xl font-bold text-amber-400 mt-1">0</h2>
             </div>
             <div class="card-glass p-5 border-l-4 border-red-600">
-                <p class="text-xs text-gray-400 font-bold uppercase">Faltante Cubetas</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Faltante Cubetas</p>
                 <h2 id="kpi-c-diff" class="text-3xl font-bold text-red-500 mt-1">0</h2>
             </div>
-            <!-- NEVERAS -->
             <div class="card-glass p-5 border-l-4 border-blue-500">
-                <p class="text-xs text-gray-400 font-bold uppercase">Neveras Salida</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Neveras Salida</p>
                 <h2 id="kpi-n-out" class="text-3xl font-bold text-blue-500 mt-1">0</h2>
             </div>
             <div class="card-glass p-5 border-l-4 border-blue-400">
-                <p class="text-xs text-gray-400 font-bold uppercase">Neveras Retorno</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Neveras Retorno</p>
                 <h2 id="kpi-n-in" class="text-3xl font-bold text-blue-400 mt-1">0</h2>
             </div>
             <div class="card-glass p-5 border-l-4 border-red-400">
-                <p class="text-xs text-gray-400 font-bold uppercase">Faltante Neveras</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Faltante Neveras</p>
                 <h2 id="kpi-n-diff" class="text-3xl font-bold text-red-400 mt-1">0</h2>
             </div>
         </div>
 
-        <!-- CHARTS SECTION -->
+        <!-- GRÁFICOS -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="card-glass p-6">
-                <h3 class="text-lg font-semibold mb-6">Eficiencia de Retorno por Ruta</h3>
+                <h3 class="text-sm font-bold mb-6 uppercase text-gray-500 tracking-widest">Retorno por Ruta</h3>
                 <div class="h-[300px]"><canvas id="chartLine"></canvas></div>
             </div>
             <div class="card-glass p-6">
-                <h3 class="text-lg font-semibold mb-6">Top 10 Móviles (% de Retorno)</h3>
+                <h3 class="text-sm font-bold mb-6 uppercase text-gray-500 tracking-widest">Eficiencia por Móvil (%)</h3>
                 <div class="h-[300px]"><canvas id="chartBar"></canvas></div>
-            </div>
-            <div class="card-glass p-6 lg:col-span-2">
-                <h3 class="text-lg font-semibold mb-6">Cumplimiento por Auxiliar (%)</h3>
-                <div class="h-[250px]"><canvas id="chartAuxiliar"></canvas></div>
             </div>
         </div>
 
-        <!-- DATA TABLE -->
+        <!-- TABLA DETALLE -->
         <div class="card-glass overflow-hidden mb-12">
-            <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-                <h3 class="font-bold">Últimas Planillas Procesadas</h3>
+            <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/40">
+                <h3 class="font-bold text-sm uppercase tracking-widest">Detalle de Operación</h3>
                 <span id="rowCount" class="text-[10px] bg-blue-900/30 text-blue-400 px-3 py-1 rounded-full border border-blue-800">0 REGISTROS</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="text-gray-500 border-b border-zinc-800">
-                            <th class="p-4 font-medium uppercase text-xs">Planilla</th>
-                            <th class="p-4 font-medium uppercase text-xs">Ruta / Móvil</th>
-                            <th class="p-4 font-medium uppercase text-xs">Cubetas (S/E)</th>
-                            <th class="p-4 font-medium uppercase text-xs">Neveras (S/E)</th>
-                            <th class="p-4 font-medium uppercase text-xs">Auxiliar</th>
-                            <th class="p-4 font-medium uppercase text-xs">Efectividad</th>
+                    <thead class="text-gray-500 border-b border-zinc-800 bg-zinc-900/20">
+                        <tr>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Mes</th>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Planilla</th>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Ruta / Móvil</th>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Cubetas (S/E)</th>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Neveras (S/E)</th>
+                            <th class="p-4 uppercase text-[10px] tracking-wider">Auxiliar</th>
                         </tr>
                     </thead>
-                    <tbody id="dataTableBody" class="divide-y divide-zinc-800">
-                        <!-- JS injects rows -->
-                    </tbody>
+                    <tbody id="dataTableBody" class="divide-y divide-zinc-800 text-zinc-300"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
     <script>
-        // CONFIGURACIÓN CENTRALIZADA
         const SHEET_ID = '17rAebJx_WwaCg4Da7WIVgv6-7F5kCCbu0SusABJP_mY';
-        const GID = '0';
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+        
+        // Listado para ordenamiento cronológico
+        const MONTH_ORDER = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
         let rawData = [];
         let chartInstances = {};
 
-        // INICIALIZACIÓN
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchData();
-            // Auto-actualizar cada 2 minutos
-            setInterval(fetchData, 120000);
-        });
-
         async function fetchData() {
-            const syncIcon = document.getElementById('syncIndicator');
-            syncIcon.classList.remove('hidden');
-
+            document.getElementById('syncIndicator').classList.remove('hidden');
             try {
-                // cache: 'no-store' + timestamp asegura que traemos data fresca del Sheet
+                // cache: no-store para forzar datos nuevos
                 const response = await fetch(`${CSV_URL}&t=${Date.now()}`, { cache: "no-store" });
                 const text = await response.text();
                 
                 rawData = parseCSV(text);
                 populateFilters();
                 applyFilters();
-                updateTimestamp();
-
-            } catch (error) {
-                console.error("Error cargando Google Sheets:", error);
-                alert("No se pudo conectar con el Sheet. Revisa que esté compartido como público.");
-            } finally {
-                syncIcon.classList.add('hidden');
+                
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = `Actualizado: ${now.toLocaleTimeString()}`;
+            } catch (e) {
+                console.error("Error:", e);
+                alert("Error al conectar con la fuente de datos.");
             }
+            document.getElementById('syncIndicator').classList.add('hidden');
         }
 
         function parseCSV(csv) {
             const lines = csv.split('\n');
             const result = [];
             
-            // Empezamos en i=1 para saltar cabeceras
             for (let i = 1; i < lines.length; i++) {
+                // Split que ignora comas dentro de comillas
                 const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (row.length < 10) continue;
 
-                // Mapeo preciso basado en tu estructura
-                result.push({
-                    mes: row[0]?.trim(),
-                    operacion: row[2]?.trim(),
-                    cubetas: parseInt(row[3]) || 0,
-                    neveras: parseInt(row[6]) || 0,
-                    planilla: row[7]?.trim(),
-                    movil: row[8]?.trim(),
-                    ruta: row[12]?.trim(),
-                    ret_neveras: parseInt(row[22]) || 0,
-                    ret_cubetas: parseInt(row[23]) || 0,
-                    auxiliar: row[25]?.trim()
-                });
-            }
-            return result;
-        }
-
-        function populateFilters() {
-            const filters = {
-                filterMes: 'mes',
-                filterRuta: 'ruta',
-                filterMovil: 'movil',
-                filterAuxiliar: 'auxiliar'
-            };
-
-            for (let [id, key] of Object.entries(filters)) {
-                const select = document.getElementById(id);
-                const currentVal = select.value;
-                const uniqueValues = [...new Set(rawData.map(item => item[key]))].filter(Boolean).sort();
-                
-                select.innerHTML = `<option value="">${id.replace('filter','')}</option>`;
-                uniqueValues.forEach(val => {
-                    const opt = document.createElement('option');
-                    opt.value = val;
-                    opt.textContent = val;
-                    if (val === currentVal) opt.selected = true;
-                    select.appendChild(opt);
-                });
-            }
-        }
-
-        function applyFilters() {
-            const fMes = document.getElementById('filterMes').value;
-            const fRuta = document.getElementById('filterRuta').value;
-            const fMovil = document.getElementById('filterMovil').value;
-            const fAux = document.getElementById('filterAuxiliar').value;
-
-            const filtered = rawData.filter(d => {
-                return (!fMes || d.mes === fMes) &&
-                       (!fRuta || d.ruta === fRuta) &&
-                       (!fMovil || d.movil === fMovil) &&
-                       (!fAux || d.auxiliar === fAux);
-            });
-
-            renderDashboard(filtered);
-        }
-
-        function renderDashboard(data) {
-            // 1. Cálculos de KPIs
-            const kpis = data.reduce((acc, curr) => {
-                acc.cOut += curr.cubetas;
-                acc.cIn += curr.ret_cubetas;
-                acc.nOut += curr.neveras;
-                acc.nIn += curr.ret_neveras;
-                return acc;
-            }, { cOut: 0, cIn: 0, nOut: 0, nIn: 0 });
-
-            document.getElementById('kpi-c-out').textContent = kpis.cOut.toLocaleString();
-            document.getElementById('kpi-c-in').textContent = kpis.cIn.toLocaleString();
-            document.getElementById('kpi-c-diff').textContent = (kpis.cOut - kpis.cIn).toLocaleString();
-            document.getElementById('kpi-n-out').textContent = kpis.nOut.toLocaleString();
-            document.getElementById('kpi-n-in').textContent = kpis.nIn.toLocaleString();
-            document.getElementById('kpi-n-diff').textContent = (kpis.nOut - kpis.nIn).toLocaleString();
-            document.getElementById('rowCount').textContent = `${data.length} REGISTROS`;
-
-            // 2. Gráficos
-            updateCharts(data);
-
-            // 3. Tabla
-            updateTable(data);
-        }
-
-        function updateCharts(data) {
-            // Destruir charts previos para evitar errores de renderizado
-            Object.values(chartInstances).forEach(chart => chart.destroy());
-
-            const commonOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: '#666' } },
-                    y: { grid: { color: '#222' }, ticks: { color: '#666' } }
-                }
-            };
-
-            // Chart 1: Línea (Rutas)
-            const routeLabels = [...new Set(data.map(d => d.ruta))].slice(0, 15);
-            chartInstances.line = new Chart(document.getElementById('chartLine'), {
-                type: 'line',
-                data: {
-                    labels: routeLabels,
-                    datasets: [
-                        { label: 'Salida Cubetas', data: routeLabels.map(r => data.filter(x => x.ruta === r).reduce((a,b) => a + b.cubetas, 0)), borderColor: '#fbbf24', tension: 0.4 },
-                        { label: 'Retorno Cubetas', data: routeLabels.map(r => data.filter(x => x.ruta === r).reduce((a,b) => a + b.ret_cubetas, 0)), borderColor: '#3b82f6', tension: 0.4 }
-                    ]
-                },
-                options: commonOptions
-            });
-
-            // Chart 2: Barras Horizontales (Móviles)
-            const mobileData = [...new Set(data.map(d => d.movil))].slice(0, 10).map(m => {
-                const subset = data.filter(x => x.movil === m);
-                const total = subset.reduce((a,b) => a + (b.cubetas + b.neveras), 0);
-                const ret = subset.reduce((a,b) => a + (b.ret_cubetas + b.ret_neveras), 0);
-                return { label: m, val: total > 0 ? (ret / total) * 100 : 0 };
-            }).sort((a,b) => b.val - a.val);
-
-            chartInstances.bar = new Chart(document.getElementById('chartBar'), {
-                type: 'bar',
-                data: {
-                    labels: mobileData.map(x => x.label),
-                    datasets: [{ label: '% Retorno', data: mobileData.map(x => x.val), backgroundColor: '#3b82f6' }]
-                },
-                options: { ...commonOptions, indexAxis: 'y' }
-            });
-
-            // Chart 3: Auxiliares
-            const auxLabels = [...new Set(data.map(d => d.auxiliar))].slice(0, 12);
-            chartInstances.aux = new Chart(document.getElementById('chartAuxiliar'), {
-                type: 'bar',
-                data: {
-                    labels: auxLabels,
-                    datasets: [{ 
-                        label: '% Efectividad Auxiliar', 
-                        data: auxLabels.map(a => {
-                            const subset = data.filter(x => x.auxiliar === a);
-                            const out = subset.reduce((s,c) => s + c.cubetas, 0);
-                            const ret = subset.reduce((s,c) => s + c.ret_cubetas, 0);
-                            return out > 0 ? (ret/out)*100 : 0;
-                        }),
-                        backgroundColor: '#fbbf24' 
-                    }]
-                },
-                options: commonOptions
-            });
-        }
-
-        function updateTable(data) {
-            const tbody = document.getElementById('dataTableBody');
-            tbody.innerHTML = '';
-            
-            data.slice(0, 15).forEach(row => {
-                const totalOut = row.cubetas + row.neveras;
-                const totalIn = row.ret_cubetas + row.ret_neveras;
-                const eff = totalOut > 0 ? Math.round((totalIn / totalOut) * 100) : 0;
-                
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-zinc-900/50 transition";
-                tr.innerHTML = `
-                    <td class="p-4 font-mono text-blue-400 font-bold">${row.planilla}</td>
-                    <td class="p-4">
-                        <div class="font-bold text-white">${row.ruta}</div>
-                        <div class="text-[10px] text-gray-500 uppercase">Móvil: ${row.movil}</div>
-                    </td>
-                    <td class="p-4">S:${row.cubetas} / <span class="text-amber-500">E:${row.ret_cubetas}</span></td>
-                    <td class="p-4">S:${row.neveras} / <span class="text-blue-400">E:${row.ret_neveras}</span></td>
-                    <td class="p-4 italic text-gray-400">${row.auxiliar || 'N/A'}</td>
-                    <td class="p-4">
-                        <span class="px-2 py-1 rounded text-xs font-bold ${eff >= 90 ? 'bg-green-900/30 text-green-500' : 'bg-red-900/30 text-red-500'}">
-                            ${eff}%
-                        </span>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function updateTimestamp() {
-            const now = new Date();
-            document.getElementById('lastUpdate').textContent = `Actualizado: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-        }
-    </script>
-</body>
-</html>
+                // MAPEADO SEGÚN TU SOLICITUD:
+                //
