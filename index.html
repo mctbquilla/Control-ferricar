@@ -3,323 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferricar | Control Operativo Total</title>
+    <title>Logistics Dashboard | Control de Retorno</title>
+    <!-- Tailwind CSS para el estilizado rápido y profesional -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para las visualizaciones -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f1f5f9; }
-        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .tab-active { background: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
-        .loading-overlay { background: #020617; position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        select option { background-color: #0f172a; color: white; }
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-blue: #3b82f6;
+            --accent-yellow: #fbbf24;
+            --text-main: #e0e0e0;
+            --border-color: #333;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+        }
+        .card-glass {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+        select {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+        select:hover { border-color: var(--accent-blue); }
+        .loader {
+            border: 3px solid #333;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="p-4 md:p-6 lg:p-8">
 
-    <!-- Cargador -->
-    <div id="loader" class="loading-overlay">
-        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-blue-500 font-bold tracking-widest animate-pulse uppercase">Procesando Datos Reales...</h2>
-    </div>
-
-    <!-- Navegación -->
-    <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-6 py-4">
-        <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+    <!-- HEADER SECTION -->
+    <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+        <div>
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-600 rounded-lg"><i data-lucide="truck" class="text-white w-6 h-6"></i></div>
-                <h1 class="text-xl font-bold uppercase">FERRICAR <span class="text-blue-400 font-light text-sm ml-2">OPERACIÓN</span></h1>
+                <h1 class="text-3xl font-bold tracking-tight">Analytics <span class="text-blue-500">Logística</span></h1>
+                <div id="syncIndicator" class="hidden loader"></div>
             </div>
-            <nav class="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
-                <button onclick="showTab('operativo')" id="btn-operativo" class="tab-active px-6 py-2 rounded-lg text-xs font-bold uppercase transition-all">Operativo</button>
-                <button onclick="showTab('plasticas')" id="btn-plasticas" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase transition-all">Activos</button>
-                <button onclick="showTab('auxiliares')" id="btn-auxiliares" class="px-6 py-2 rounded-lg text-xs font-bold text-slate-400 uppercase transition-all">Auxiliares</button>
-            </nav>
-            <div id="conn-status" class="flex items-center gap-2 text-[10px] font-black uppercase py-2 px-4 rounded-full bg-slate-800 border border-slate-700">
-                <span id="status-dot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
-                <span id="status-text">Buscando Datos</span>
+            <p class="text-gray-500 text-sm mt-1">Control de retorno de Cubetas y Neveras en tiempo real</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+            <!-- Sincronización -->
+            <div class="flex flex-col mr-4">
+                <span id="lastUpdate" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-right">Actualizado: --:--</span>
+                <button onclick="fetchData()" class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg transition text-sm border border-zinc-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M18 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    Sincronizar Data
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div class="grid grid-cols-2 md:flex gap-2 w-full md:w-auto">
+                <select id="filterMes" onchange="applyFilters()"><option value="">Mes</option></select>
+                <select id="filterRuta" onchange="applyFilters()"><option value="">Ruta</option></select>
+                <select id="filterMovil" onchange="applyFilters()"><option value="">Móvil</option></select>
+                <select id="filterAuxiliar" onchange="applyFilters()"><option value="">Auxiliar</option></select>
             </div>
         </div>
     </header>
 
-    <main class="max-w-[1600px] mx-auto p-6">
-        <!-- Selector Mes -->
-        <div class="glass-card rounded-2xl p-8 mb-8 border-l-4 border-blue-500">
-            <p class="text-xs text-slate-500 font-black uppercase mb-2 tracking-widest">Periodo de Análisis</p>
-            <select id="month-filter" onchange="applyFilters()" class="w-full md:w-80 bg-slate-900 text-white text-2xl font-bold outline-none border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                <option value="">Esperando tabla...</option>
-            </select>
+    <!-- KPI CARDS GRID -->
+    <main>
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <!-- CUBETAS -->
+            <div class="card-glass p-5 border-l-4 border-amber-500">
+                <p class="text-xs text-gray-400 font-bold uppercase">Cubetas Salida</p>
+                <h2 id="kpi-c-out" class="text-3xl font-bold text-amber-500 mt-1">0</h2>
+            </div>
+            <div class="card-glass p-5 border-l-4 border-amber-400">
+                <p class="text-xs text-gray-400 font-bold uppercase">Cubetas Retorno</p>
+                <h2 id="kpi-c-in" class="text-3xl font-bold text-amber-400 mt-1">0</h2>
+            </div>
+            <div class="card-glass p-5 border-l-4 border-red-600">
+                <p class="text-xs text-gray-400 font-bold uppercase">Faltante Cubetas</p>
+                <h2 id="kpi-c-diff" class="text-3xl font-bold text-red-500 mt-1">0</h2>
+            </div>
+            <!-- NEVERAS -->
+            <div class="card-glass p-5 border-l-4 border-blue-500">
+                <p class="text-xs text-gray-400 font-bold uppercase">Neveras Salida</p>
+                <h2 id="kpi-n-out" class="text-3xl font-bold text-blue-500 mt-1">0</h2>
+            </div>
+            <div class="card-glass p-5 border-l-4 border-blue-400">
+                <p class="text-xs text-gray-400 font-bold uppercase">Neveras Retorno</p>
+                <h2 id="kpi-n-in" class="text-3xl font-bold text-blue-400 mt-1">0</h2>
+            </div>
+            <div class="card-glass p-5 border-l-4 border-red-400">
+                <p class="text-xs text-gray-400 font-bold uppercase">Faltante Neveras</p>
+                <h2 id="kpi-n-diff" class="text-3xl font-bold text-red-400 mt-1">0</h2>
+            </div>
         </div>
 
-        <div id="main-content">
-            <!-- PANEL OPERATIVO -->
-            <div id="tab-operativo" class="tab-content">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase mb-4 tracking-widest">Total Planillas</p>
-                        <div id="kpi-planillas" class="text-5xl font-bold text-white">0</div>
-                    </div>
-                    <div class="glass-card p-8 rounded-3xl">
-                        <p class="text-xs font-black text-slate-500 uppercase mb-4 tracking-widest">% Promedio Retorno</p>
-                        <div id="kpi-perc-retorno-cubetas" class="text-5xl font-bold text-blue-400">0%</div>
-                    </div>
-                    <div id="card-neveras" class="glass-card p-8 rounded-3xl border-b-4">
-                        <p id="label-neveras" class="text-xs font-black uppercase mb-4 tracking-widest">Balance Neveras</p>
-                        <div id="kpi-neveras-diff" class="text-5xl font-bold text-white">0</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-500">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Total Cubetas Salieron</p>
-                        <div id="kpi-cub-salieron" class="text-3xl font-bold">0</div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl border-l-4 border-amber-500">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Total Cubetas Ingresaron</p>
-                        <div id="kpi-cub-ingresaron" class="text-3xl font-bold text-amber-500">0</div>
-                    </div>
-                </div>
-
-                <div class="glass-card p-8 rounded-3xl h-[450px]">
-                    <h3 class="font-bold mb-8 text-slate-400 uppercase text-xs tracking-widest flex items-center gap-2">
-                        <i data-lucide="line-chart"></i> Trading de Retorno Diario (Cubetas)
-                    </h3>
-                    <div class="h-full relative"><canvas id="tradingChart"></canvas></div>
-                </div>
+        <!-- CHARTS SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card-glass p-6">
+                <h3 class="text-lg font-semibold mb-6">Eficiencia de Retorno por Ruta</h3>
+                <div class="h-[300px]"><canvas id="chartLine"></canvas></div>
             </div>
-
-            <!-- PANEL ACTIVOS (PLÁSTICAS) -->
-            <div id="tab-plasticas" class="tab-content hidden">
-                <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-900/80 text-slate-500 uppercase text-[10px] font-black">
-                            <tr>
-                                <th class="px-8 py-5">Ruta</th>
-                                <th class="px-8 py-5 text-center">Cubetas Despacho</th>
-                                <th class="px-8 py-5 text-center">Cubetas Retorno</th>
-                                <th class="px-8 py-5 text-center">Neveras Despacho</th>
-                                <th class="px-8 py-5 text-center">Neveras Retorno</th>
-                                <th class="px-8 py-5 text-center">Eficiencia</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rutaTableBody" class="divide-y divide-slate-800"></tbody>
-                    </table>
-                </div>
+            <div class="card-glass p-6">
+                <h3 class="text-lg font-semibold mb-6">Top 10 Móviles (% de Retorno)</h3>
+                <div class="h-[300px]"><canvas id="chartBar"></canvas></div>
             </div>
+            <div class="card-glass p-6 lg:col-span-2">
+                <h3 class="text-lg font-semibold mb-6">Cumplimiento por Auxiliar (%)</h3>
+                <div class="h-[250px]"><canvas id="chartAuxiliar"></canvas></div>
+            </div>
+        </div>
 
-            <!-- PANEL AUXILIARES -->
-            <div id="tab-auxiliares" class="tab-content hidden">
-                <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-900/80 text-slate-500 uppercase text-[10px] font-black">
-                            <tr>
-                                <th class="px-8 py-5">Nombre Auxiliar</th>
-                                <th class="px-8 py-5 text-center">Total Planillas</th>
-                                <th class="px-8 py-5 text-center text-orange-400">Total Novedades</th>
-                                <th class="px-8 py-5 text-center">Pts. Cerrados</th>
-                                <th class="px-8 py-5 text-center">Incidencia (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="auxTableBody" class="divide-y divide-slate-800"></tbody>
-                    </table>
-                </div>
+        <!-- DATA TABLE -->
+        <div class="card-glass overflow-hidden mb-12">
+            <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+                <h3 class="font-bold">Últimas Planillas Procesadas</h3>
+                <span id="rowCount" class="text-[10px] bg-blue-900/30 text-blue-400 px-3 py-1 rounded-full border border-blue-800">0 REGISTROS</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b border-zinc-800">
+                            <th class="p-4 font-medium uppercase text-xs">Planilla</th>
+                            <th class="p-4 font-medium uppercase text-xs">Ruta / Móvil</th>
+                            <th class="p-4 font-medium uppercase text-xs">Cubetas (S/E)</th>
+                            <th class="p-4 font-medium uppercase text-xs">Neveras (S/E)</th>
+                            <th class="p-4 font-medium uppercase text-xs">Auxiliar</th>
+                            <th class="p-4 font-medium uppercase text-xs">Efectividad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-zinc-800">
+                        <!-- JS injects rows -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
 
     <script>
-        const GOOGLE_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQEKeP2MiCBr44H8Ib1DebEqAz77tFEzKfgLxX6ygxixdQRyMNyhqQU63yNl-SBj3W1MjOYlMPhLkK/pub?output=csv';
-        
+        // CONFIGURACIÓN CENTRALIZADA
+        const SHEET_ID = '17rAebJx_WwaCg4Da7WIVgv6-7F5kCCbu0SusABJP_mY';
+        const GID = '0';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
         let rawData = [];
-        let chartInstance = null;
+        let chartInstances = {};
 
-        // MAPEO EXACTO BASADO EN TU ESTRUCTURA
-        const colMap = {
-            mes: 'MES',
-            fecha: 'FECHA',
-            cubetas: 'CUBETAS',
-            neveras: 'NEVERAS',
-            ret_cub: 'retorno cubetas',
-            ret_nev: 'Retorno neveras',
-            perc_ret: '%retorno',
-            ruta: 'RUTA',
-            aux: 'AUXILIAR',
-            nov: 'TOTAL NOVEDADES',
-            pts_cer: 'PUNTOS CERRADOS'
-        };
-
-        // Función para limpiar números (quita %, espacios, convierte comas en puntos)
-        function cleanNum(val) {
-            if (typeof val === 'number') return val;
-            if (!val || val === "") return 0;
-            let cleaned = val.toString().replace('%', '').replace(/ /g, '').replace(',', '.');
-            return parseFloat(cleaned) || 0;
-        }
-
-        window.onload = () => {
-            lucide.createIcons();
+        // INICIALIZACIÓN
+        document.addEventListener('DOMContentLoaded', () => {
             fetchData();
-        };
+            // Auto-actualizar cada 2 minutos
+            setInterval(fetchData, 120000);
+        });
 
         async function fetchData() {
+            const syncIcon = document.getElementById('syncIndicator');
+            syncIcon.classList.remove('hidden');
+
             try {
-                const response = await fetch(GOOGLE_SHEET_CSV);
-                const csvText = await response.text();
-                rawData = parseCSV(csvText);
+                // cache: 'no-store' + timestamp asegura que traemos data fresca del Sheet
+                const response = await fetch(`${CSV_URL}&t=${Date.now()}`, { cache: "no-store" });
+                const text = await response.text();
+                
+                rawData = parseCSV(text);
+                populateFilters();
+                applyFilters();
+                updateTimestamp();
 
-                if (rawData.length > 0) {
-                    document.getElementById('status-dot').className = "w-2 h-2 bg-emerald-500 rounded-full";
-                    document.getElementById('status-text').innerText = "Sincronizado";
-                    populateMonthFilter();
-                    applyFilters();
-                }
             } catch (error) {
-                console.error(error);
-                document.getElementById('status-dot').className = "w-2 h-2 bg-rose-500 rounded-full";
-                document.getElementById('status-text').innerText = "Error de Datos";
+                console.error("Error cargando Google Sheets:", error);
+                alert("No se pudo conectar con el Sheet. Revisa que esté compartido como público.");
+            } finally {
+                syncIcon.classList.add('hidden');
             }
-            document.getElementById('loader').style.display = 'none';
         }
 
-        function parseCSV(text) {
-            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-            let headerIndex = lines.findIndex(l => l.toLowerCase().includes('mes'));
-            if (headerIndex === -1) return [];
-
-            const headers = lines[headerIndex].split(',').map(h => h.trim().replace(/"/g, ''));
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const result = [];
             
-            return lines.slice(headerIndex + 1).map(line => {
-                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                let obj = {};
-                headers.forEach((h, i) => {
-                    obj[h] = values[i] ? values[i].trim().replace(/"/g, '') : "";
+            // Empezamos en i=1 para saltar cabeceras
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (row.length < 10) continue;
+
+                // Mapeo preciso basado en tu estructura
+                result.push({
+                    mes: row[0]?.trim(),
+                    operacion: row[2]?.trim(),
+                    cubetas: parseInt(row[3]) || 0,
+                    neveras: parseInt(row[6]) || 0,
+                    planilla: row[7]?.trim(),
+                    movil: row[8]?.trim(),
+                    ruta: row[12]?.trim(),
+                    ret_neveras: parseInt(row[22]) || 0,
+                    ret_cubetas: parseInt(row[23]) || 0,
+                    auxiliar: row[25]?.trim()
                 });
-                return obj;
-            });
+            }
+            return result;
         }
 
-        function populateMonthFilter() {
-            const select = document.getElementById('month-filter');
-            const months = [...new Set(rawData.map(r => r[colMap.mes]))].filter(m => m);
-            select.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-            select.value = months[months.length - 1];
+        function populateFilters() {
+            const filters = {
+                filterMes: 'mes',
+                filterRuta: 'ruta',
+                filterMovil: 'movil',
+                filterAuxiliar: 'auxiliar'
+            };
+
+            for (let [id, key] of Object.entries(filters)) {
+                const select = document.getElementById(id);
+                const currentVal = select.value;
+                const uniqueValues = [...new Set(rawData.map(item => item[key]))].filter(Boolean).sort();
+                
+                select.innerHTML = `<option value="">${id.replace('filter','')}</option>`;
+                uniqueValues.forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    if (val === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
         }
 
         function applyFilters() {
-            const month = document.getElementById('month-filter').value;
-            const filtered = rawData.filter(r => r[colMap.mes] === month);
-            updateDashboard(filtered);
+            const fMes = document.getElementById('filterMes').value;
+            const fRuta = document.getElementById('filterRuta').value;
+            const fMovil = document.getElementById('filterMovil').value;
+            const fAux = document.getElementById('filterAuxiliar').value;
+
+            const filtered = rawData.filter(d => {
+                return (!fMes || d.mes === fMes) &&
+                       (!fRuta || d.ruta === fRuta) &&
+                       (!fMovil || d.movil === fMovil) &&
+                       (!fAux || d.auxiliar === fAux);
+            });
+
+            renderDashboard(filtered);
         }
 
-        function updateDashboard(data) {
-            // Totales KPI
-            const total = data.length;
-            const cS = data.reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0);
-            const cR = data.reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0);
-            const nS = data.reduce((a, b) => a + cleanNum(b[colMap.neveras]), 0);
-            const nR = data.reduce((a, b) => a + cleanNum(b[colMap.ret_nev]), 0);
-            const pSum = data.reduce((a, b) => a + cleanNum(b[colMap.perc_ret]), 0);
+        function renderDashboard(data) {
+            // 1. Cálculos de KPIs
+            const kpis = data.reduce((acc, curr) => {
+                acc.cOut += curr.cubetas;
+                acc.cIn += curr.ret_cubetas;
+                acc.nOut += curr.neveras;
+                acc.nIn += curr.ret_neveras;
+                return acc;
+            }, { cOut: 0, cIn: 0, nOut: 0, nIn: 0 });
 
-            document.getElementById('kpi-planillas').innerText = total;
-            document.getElementById('kpi-perc-retorno-cubetas').innerText = (pSum/total || 0).toFixed(1) + "%";
-            
-            const nDiff = nR - nS;
-            document.getElementById('kpi-neveras-diff').innerText = Math.abs(nDiff);
-            document.getElementById('label-neveras').innerText = nDiff < 0 ? "Neveras Faltantes" : "Neveras de Más";
-            document.getElementById('card-neveras').style.borderColor = nDiff < 0 ? '#f43f5e' : '#10b981';
-            document.getElementById('card-neveras').style.color = nDiff < 0 ? '#fb7185' : '#34d399';
+            document.getElementById('kpi-c-out').textContent = kpis.cOut.toLocaleString();
+            document.getElementById('kpi-c-in').textContent = kpis.cIn.toLocaleString();
+            document.getElementById('kpi-c-diff').textContent = (kpis.cOut - kpis.cIn).toLocaleString();
+            document.getElementById('kpi-n-out').textContent = kpis.nOut.toLocaleString();
+            document.getElementById('kpi-n-in').textContent = kpis.nIn.toLocaleString();
+            document.getElementById('kpi-n-diff').textContent = (kpis.nOut - kpis.nIn).toLocaleString();
+            document.getElementById('rowCount').textContent = `${data.length} REGISTROS`;
 
-            document.getElementById('kpi-cub-salieron').innerText = cS;
-            document.getElementById('kpi-cub-ingresaron').innerText = cR;
-            document.getElementById('kpi-perc-global').innerText = cS > 0 ? ((cR/cS)*100).toFixed(1) + "%" : "0%";
+            // 2. Gráficos
+            updateCharts(data);
 
-            renderChart(data);
-            renderTables(data);
+            // 3. Tabla
+            updateTable(data);
         }
 
-        function renderChart(data) {
-            const days = [...new Set(data.map(r => r[colMap.fecha]))].sort();
-            const s = days.map(d => data.filter(r => r[colMap.fecha] === d).reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0));
-            const r = days.map(d => data.filter(r => r[colMap.fecha] === d).reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0));
+        function updateCharts(data) {
+            // Destruir charts previos para evitar errores de renderizado
+            Object.values(chartInstances).forEach(chart => chart.destroy());
 
-            const ctx = document.getElementById('tradingChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#666' } },
+                    y: { grid: { color: '#222' }, ticks: { color: '#666' } }
+                }
+            };
+
+            // Chart 1: Línea (Rutas)
+            const routeLabels = [...new Set(data.map(d => d.ruta))].slice(0, 15);
+            chartInstances.line = new Chart(document.getElementById('chartLine'), {
                 type: 'line',
                 data: {
-                    labels: days.map(d => d.split('-').pop() || d),
+                    labels: routeLabels,
                     datasets: [
-                        { label: 'Despacho', data: s, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
-                        { label: 'Retorno', data: r, borderColor: '#fbbf24', tension: 0.4 }
+                        { label: 'Salida Cubetas', data: routeLabels.map(r => data.filter(x => x.ruta === r).reduce((a,b) => a + b.cubetas, 0)), borderColor: '#fbbf24', tension: 0.4 },
+                        { label: 'Retorno Cubetas', data: routeLabels.map(r => data.filter(x => x.ruta === r).reduce((a,b) => a + b.ret_cubetas, 0)), borderColor: '#3b82f6', tension: 0.4 }
                     ]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } }
-                }
+                options: commonOptions
+            });
+
+            // Chart 2: Barras Horizontales (Móviles)
+            const mobileData = [...new Set(data.map(d => d.movil))].slice(0, 10).map(m => {
+                const subset = data.filter(x => x.movil === m);
+                const total = subset.reduce((a,b) => a + (b.cubetas + b.neveras), 0);
+                const ret = subset.reduce((a,b) => a + (b.ret_cubetas + b.ret_neveras), 0);
+                return { label: m, val: total > 0 ? (ret / total) * 100 : 0 };
+            }).sort((a,b) => b.val - a.val);
+
+            chartInstances.bar = new Chart(document.getElementById('chartBar'), {
+                type: 'bar',
+                data: {
+                    labels: mobileData.map(x => x.label),
+                    datasets: [{ label: '% Retorno', data: mobileData.map(x => x.val), backgroundColor: '#3b82f6' }]
+                },
+                options: { ...commonOptions, indexAxis: 'y' }
+            });
+
+            // Chart 3: Auxiliares
+            const auxLabels = [...new Set(data.map(d => d.auxiliar))].slice(0, 12);
+            chartInstances.aux = new Chart(document.getElementById('chartAuxiliar'), {
+                type: 'bar',
+                data: {
+                    labels: auxLabels,
+                    datasets: [{ 
+                        label: '% Efectividad Auxiliar', 
+                        data: auxLabels.map(a => {
+                            const subset = data.filter(x => x.auxiliar === a);
+                            const out = subset.reduce((s,c) => s + c.cubetas, 0);
+                            const ret = subset.reduce((s,c) => s + c.ret_cubetas, 0);
+                            return out > 0 ? (ret/out)*100 : 0;
+                        }),
+                        backgroundColor: '#fbbf24' 
+                    }]
+                },
+                options: commonOptions
             });
         }
 
-        function renderTables(data) {
-            const rutaBody = document.getElementById('rutaTableBody');
-            const auxBody = document.getElementById('auxTableBody');
-            rutaBody.innerHTML = ''; auxBody.innerHTML = '';
-
-            // Lógica Tabla Activos
-            const routes = [...new Set(data.map(r => r[colMap.ruta]))].filter(r => r);
-            routes.forEach(rt => {
-                const group = data.filter(r => r[colMap.ruta] === rt);
-                const cDesp = group.reduce((a, b) => a + cleanNum(b[colMap.cubetas]), 0);
-                const cRet = group.reduce((a, b) => a + cleanNum(b[colMap.ret_cub]), 0);
-                const nDesp = group.reduce((a, b) => a + cleanNum(b[colMap.neveras]), 0);
-                const nRet = group.reduce((a, b) => a + cleanNum(b[colMap.ret_nev]), 0);
-                const p = cDesp > 0 ? ((cRet/cDesp)*100).toFixed(1) : 0;
+        function updateTable(data) {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            data.slice(0, 15).forEach(row => {
+                const totalOut = row.cubetas + row.neveras;
+                const totalIn = row.ret_cubetas + row.ret_neveras;
+                const eff = totalOut > 0 ? Math.round((totalIn / totalOut) * 100) : 0;
                 
-                rutaBody.innerHTML += `<tr class="hover:bg-slate-800/30">
-                    <td class="px-8 py-4 font-bold text-slate-300">${rt}</td>
-                    <td class="px-8 py-4 text-center">${cDesp}</td>
-                    <td class="px-8 py-4 text-center text-blue-400">${cRet}</td>
-                    <td class="px-8 py-4 text-center">${nDesp}</td>
-                    <td class="px-8 py-4 text-center text-emerald-400">${nRet}</td>
-                    <td class="px-8 py-4 text-center font-black ${p < 90 ? 'text-rose-500' : 'text-emerald-500'}">${p}%</td>
-                </tr>`;
-            });
-
-            // Lógica Tabla Auxiliares
-            const auxs = [...new Set(data.map(r => r[colMap.aux]))].filter(a => a);
-            auxs.forEach(ax => {
-                const group = data.filter(r => r[colMap.aux] === ax);
-                const planillas = group.length;
-                const novs = group.reduce((a, b) => a + cleanNum(b[colMap.nov]), 0);
-                const cerr = group.reduce((a, b) => a + cleanNum(b[colMap.pts_cer]), 0);
-                const incidencia = planillas > 0 ? ((novs/planillas)*10).toFixed(1) : 0; // Escala de 0 a 100
-
-                auxBody.innerHTML += `<tr class="hover:bg-slate-800/30">
-                    <td class="px-8 py-4 font-bold text-blue-200">${ax}</td>
-                    <td class="px-8 py-4 text-center">${planillas}</td>
-                    <td class="px-8 py-4 text-center text-orange-400 font-bold">${novs}</td>
-                    <td class="px-8 py-4 text-center">${cerr}</td>
-                    <td class="px-8 py-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-blue-500 h-full" style="width: ${100 - incidencia}%"></div>
-                            </div>
-                            <span class="text-[10px] font-bold">${(100 - incidencia).toFixed(0)}%</span>
-                        </div>
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-900/50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono text-blue-400 font-bold">${row.planilla}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-white">${row.ruta}</div>
+                        <div class="text-[10px] text-gray-500 uppercase">Móvil: ${row.movil}</div>
                     </td>
-                </tr>`;
+                    <td class="p-4">S:${row.cubetas} / <span class="text-amber-500">E:${row.ret_cubetas}</span></td>
+                    <td class="p-4">S:${row.neveras} / <span class="text-blue-400">E:${row.ret_neveras}</span></td>
+                    <td class="p-4 italic text-gray-400">${row.auxiliar || 'N/A'}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${eff >= 90 ? 'bg-green-900/30 text-green-500' : 'bg-red-900/30 text-red-500'}">
+                            ${eff}%
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active', 'text-white'));
-            document.getElementById('btn-' + tabId).classList.add('tab-active');
-            lucide.createIcons();
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = `Actualizado: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
         }
     </script>
 </body>
