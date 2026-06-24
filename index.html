@@ -1,4 +1,132 @@
-<!DOCTYPE html>Int(row[23]) || 0,
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Pro Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --blue: #3b82f6; --amber: #fbbf24; }
+        body { background-color: var(--bg); color: #e0e0e0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .card-glass { background-color: var(--card); border: 1px solid #333; border-radius: 12px; }
+        select { background-color: #2a2a2a; border: 1px solid #444; color: white; padding: 0.6rem; border-radius: 8px; outline: none; cursor: pointer; }
+        select:hover { border-color: var(--blue); }
+        .loader { border: 3px solid #333; border-top: 3px solid var(--blue); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- HEADER -->
+    <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight italic text-white">PRO<span class="text-blue-500 text-not-italic">LOGISTICS</span></h1>
+                <div id="syncIndicator" class="hidden loader"></div>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">Control de Retorno | Columna B (Texto Directo)</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex flex-col text-right">
+                <span id="lastUpdate" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-blue-400">Listo</span>
+                <button onclick="fetchData()" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg text-sm border border-zinc-700 mt-1 flex items-center gap-2 transition-all">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M18 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    Sincronizar
+                </button>
+            </div>
+            <div class="grid grid-cols-2 md:flex gap-2">
+                <select id="filterMes" onchange="applyFilters()"><option value="">Mes</option></select>
+                <select id="filterRuta" onchange="applyFilters()"><option value="">Ruta</option></select>
+                <select id="filterMovil" onchange="applyFilters()"><option value="">Móvil</option></select>
+                <select id="filterAuxiliar" onchange="applyFilters()"><option value="">Auxiliar</option></select>
+            </div>
+        </div>
+    </header>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div class="card-glass p-5 border-l-4 border-amber-500"><p class="text-[10px] text-gray-400 font-bold uppercase">Cubetas Salida</p><h2 id="kpi-c-out" class="text-3xl font-bold text-amber-500 mt-1">0</h2></div>
+        <div class="card-glass p-5 border-l-4 border-amber-400"><p class="text-[10px] text-gray-400 font-bold uppercase">Cubetas Retorno</p><h2 id="kpi-c-in" class="text-3xl font-bold text-amber-300 mt-1">0</h2></div>
+        <div class="card-glass p-5 border-l-4 border-red-600"><p class="text-[10px] text-gray-400 font-bold uppercase">Diferencia</p><h2 id="kpi-c-diff" class="text-3xl font-bold text-red-500 mt-1">0</h2></div>
+        <div class="card-glass p-5 border-l-4 border-blue-500"><p class="text-[10px] text-gray-400 font-bold uppercase">Neveras Salida</p><h2 id="kpi-n-out" class="text-3xl font-bold text-blue-500 mt-1">0</h2></div>
+        <div class="card-glass p-5 border-l-4 border-blue-400"><p class="text-[10px] text-gray-400 font-bold uppercase">Neveras Retorno</p><h2 id="kpi-n-in" class="text-3xl font-bold text-blue-300 mt-1">0</h2></div>
+        <div class="card-glass p-5 border-l-4 border-red-400"><p class="text-[10px] text-gray-400 font-bold uppercase">Diferencia</p><h2 id="kpi-n-diff" class="text-3xl font-bold text-red-400 mt-1">0</h2></div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="card-glass p-6"><h3 class="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">Retorno por Ruta</h3><div class="h-[300px]"><canvas id="chartLine"></canvas></div></div>
+        <div class="card-glass p-6"><h3 class="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">Eficiencia Móvil (%)</h3><div class="h-[300px]"><canvas id="chartBar"></canvas></div></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card-glass overflow-hidden mb-12">
+        <div class="px-6 py-4 border-b border-zinc-800 flex justify-between bg-zinc-900/40 text-[10px] font-bold uppercase tracking-widest">
+            <span>Operaciones Recientes</span>
+            <span id="rowCount" class="text-blue-400">0 REGISTROS</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="text-gray-500 border-b border-zinc-800 bg-zinc-900/20 uppercase text-[10px]">
+                    <tr><th class="p-4">Mes</th><th class="p-4">Planilla</th><th class="p-4">Ruta / Móvil</th><th class="p-4 text-center">Cubetas (S/E)</th><th class="p-4 text-center">Neveras (S/E)</th><th class="p-4">Auxiliar</th></tr>
+                </thead>
+                <tbody id="dataTableBody" class="divide-y divide-zinc-800 text-zinc-300"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '17rAebJx_WwaCg4Da7WIVgv6-7F5kCCbu0SusABJP_mY';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+        const MONTH_ORDER = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        let rawData = [];
+        let chartInstances = {};
+
+        async function fetchData() {
+            document.getElementById('syncIndicator').classList.remove('hidden');
+            try {
+                // cache: "no-store" + t=Date.now() obliga a Google a dar la última versión del Excel
+                const res = await fetch(`${CSV_URL}&t=${Date.now()}`, { cache: "no-store" });
+                const text = await res.text();
+                rawData = parseCSV(text);
+                populateFilters();
+                applyFilters();
+                document.getElementById('lastUpdate').textContent = `ACTUALIZADO: ${new Date().toLocaleTimeString()}`;
+            } catch (e) { console.error("Error de conexión:", e); }
+            document.getElementById('syncIndicator').classList.add('hidden');
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const result = [];
+            
+            // Empezamos en i=1 para saltar el encabezado
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (row.length < 10) continue;
+
+                // TOMAMOS EL TEXTO DIRECTO DE LA COLUMNA B (Índice 1)
+                let mesTexto = row[1]?.trim().toUpperCase() || "";
+
+                // Validación para evitar filas basura o errores de fecha en celdas vacías
+                if (mesTexto === "" || mesTexto === "MES" || mesTexto.includes("1899") || mesTexto.includes("/")) {
+                    // Si por algún motivo Google envía una fecha o está vacío, intentamos NO guardarlo
+                    if (mesTexto === "") continue; 
+                }
+
+                result.push({
+                    mes: mesTexto,
+                    cubetas: parseInt(row[3]) || 0,
+                    neveras: parseInt(row[6]) || 0,
+                    planilla: row[7]?.trim(),
+                    movil: row[8]?.trim(),
+                    ruta: row[12]?.trim(),
+                    ret_neveras: parseInt(row[22]) || 0,
+                    ret_cubetas: parseInt(row[23]) || 0,
                     auxiliar: row[25]?.trim()
                 });
             }
@@ -85,4 +213,18 @@
             data.slice(0, 20).forEach(r => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-zinc-900/50 transition text-xs";
                 tr.innerHTML = `
-                    <td class="p-4 f
+                    <td class="p-4 font-bold text-zinc-500">${r.mes}</td>
+                    <td class="p-4 font-mono text-blue-400 font-bold">${r.planilla}</td>
+                    <td class="p-4"><b>${r.ruta}</b><br><span class="text-[9px] text-zinc-500 uppercase">${r.movil}</span></td>
+                    <td class="p-4 text-center">S: ${r.cubetas} / <span class="text-amber-500">E: ${r.ret_cubetas}</span></td>
+                    <td class="p-4 text-center">S: ${r.neveras} / <span class="text-blue-400">E: ${r.ret_neveras}</span></td>
+                    <td class="p-4 italic text-zinc-500 text-[10px]">${r.auxiliar || '-'}</td>
+                `;
+                b.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchData);
+    </script>
+</body>
+</html>
